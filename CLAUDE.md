@@ -140,4 +140,5 @@ OPENEVOLVE_NUM_TASKS=5 uv run --env-file .env python -m openevolve.cli \
 - `agents_evolving.yaml` 必須包含**恰好一個** `EVOLVE-BLOCK-START` / `EVOLVE-BLOCK-END` 區塊
 - `evaluate()` 必須是**模組頂層函式**，簽名為 `evaluate(program_path: str) -> dict`，且回傳 dict 必須包含 `combined_score` key
 - `config/openevolve_config.yaml` 已設定 `diff_based_evolution: false`（full rewrite 模式）與 `cascade_evaluation: false`
-- `data_retriever` agent 固定在 EVOLVE-BLOCK **外**，不參與進化
+- **三個 agent（包含 `data_retriever`）皆在 EVOLVE-BLOCK 內**；但 `data_retriever` 的 tool calling 格式由 `tasks.yaml` 強制，OpenEvolve 的 system_message 也提醒 LLM 不要破壞它
+- `data_retriever` 會做 **4 次** tool 呼叫（user / item / review_by_user / review_by_item）— 第 4 次取回該商品的「全站他人評分分佈」，作為校準依據

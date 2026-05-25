@@ -2,6 +2,7 @@ import os
 import tempfile
 import sys
 import logging
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
 if project_dir not in sys.path:
@@ -9,6 +10,10 @@ if project_dir not in sys.path:
 
 from websocietysimulator import Simulator
 from crewai_simulation_agent import CrewAISimulationAgent
+
+# 整個 simulation 的 hard timeout（秒）。超時則回傳 fallback fitness 讓 OpenEvolve 繼續。
+# 預設 15 分鐘，可由 OPENEVOLVE_SIM_TIMEOUT env var 覆寫。
+SIM_TIMEOUT_SEC = int(os.environ.get("OPENEVOLVE_SIM_TIMEOUT", 900))
 
 # ---------------------------------------------------------------------------
 # Lazy singleton: Simulator is expensive to initialize (loads LMDB dataset).
@@ -52,8 +57,23 @@ def evaluate(program_path: str) -> dict:
         os.environ["OPENEVOLVE_AGENTS_YAML"] = program_path
 
         num_tasks = int(os.environ.get("OPENEVOLVE_NUM_TASKS", 5))
-        print(f"\n[Evaluator] Running simulation with: {program_path}  (tasks={num_tasks})")
-        simulator.run_simulation(number_of_tasks=num_tasks, enable_threading=True, max_workers=2)
+        print(f"\n[Evaluator] Running simulation: {program_path}  (tasks={num_tasks}, timeout={SIM_TIMEOUT_SEC}s)")
+
+        # Hard timeout 包住整個 simulation。如果 simulator/CrewAI/LiteLLM 內部卡住
+        # （例如 rate limit retry 死循環），這層會在 SIM_TIMEOUT_SEC 後強制中止，
+        # 讓 evaluator 回傳 fallback 分數讓 OpenEvolve 能繼續下一個 iteration。
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(
+                    simulator.run_simulation,
+                    number_of_tasks=num_tasks,
+                    enable_threading=True,
+                    max_workers=2,
+                )
+                future.result(timeout=SIM_TIMEOUT_SEC)
+        except FuturesTimeout:
+            print(f"[Evaluator] ⏱  Simulation exceeded {SIM_TIMEOUT_SEC}s — returning fallback score")
+            return {"combined_score": 0.0}
 
         # 2. Compute official metrics
         # eval_results structure:

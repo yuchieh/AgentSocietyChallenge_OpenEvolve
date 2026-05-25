@@ -48,3 +48,4 @@ logs/
 # OpenEvolve outputs
 # =========================
 config/openevolve_output/
+config/openevolve_output_backup_*/
