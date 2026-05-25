@@ -16,10 +16,18 @@ retrieve_data_task:
     Action: Interaction Tool Wrapper
     Action Input: {{"query_type": "review_by_user", "target_id": "{user_id}"}}
 
+    Finally, query the item's historical reviews (other users' opinions of this item):
+    Action: Interaction Tool Wrapper
+    Action Input: {{"query_type": "review_by_item", "target_id": "{item_id}"}}
+
     query_type must be exactly one of: "user", "item", "review_by_user", "review_by_item".
-    You MUST complete all three tool calls above, then compile all results into a summary.
+    You MUST complete all four tool calls above, then compile all results into a summary.
   expected_output: >
-    A markdown summary listing the user's historical preferences, average rating, rating distribution, and the target item's key attributes.
+    A markdown summary covering four aspects:
+    1. User's historical preferences, average rating, rating distribution, and writing style.
+    2. Target item's key attributes (category, location, declared stars).
+    3. Item's actual rating distribution from OTHER users' reviews (to calibrate the user's likely rating relative to crowd consensus).
+    4. Any obvious mismatch or alignment between the user's rating habits and the item's typical reception.
   agent: data_retriever
 
 analyze_preference_task:
