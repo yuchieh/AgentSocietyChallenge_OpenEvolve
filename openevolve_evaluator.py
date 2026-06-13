@@ -1,7 +1,9 @@
 import os
+import json
 import tempfile
 import sys
 import logging
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -10,10 +12,51 @@ if project_dir not in sys.path:
 
 from websocietysimulator import Simulator
 from crewai_simulation_agent import CrewAISimulationAgent
+from src.tools.interaction_tool_wrapper import drain_tool_log
 
 # 整個 simulation 的 hard timeout（秒）。超時則回傳 fallback fitness 讓 OpenEvolve 繼續。
 # 預設 15 分鐘，可由 OPENEVOLVE_SIM_TIMEOUT env var 覆寫。
 SIM_TIMEOUT_SEC = int(os.environ.get("OPENEVOLVE_SIM_TIMEOUT", 900))
+
+# L0 工具使用觀測：tasks.yaml 強制的核心查詢 vs 校準用的加分查詢
+ESSENTIAL_QUERIES = {"user", "item", "review_by_user"}
+BONUS_QUERIES = {"review_by_item"}
+
+# 可選的 coverage-aware fitness shaping。
+#   shaped = raw * (1 - PENALTY * (1 - essential_coverage))
+# 預設 0.0 = 完全不影響分數（向後相容）；設 1.0 則「完全沒查核心資料」直接歸零。
+TOOL_COVERAGE_PENALTY = float(os.environ.get("OPENEVOLVE_TOOL_COVERAGE_PENALTY", "0"))
+
+
+def _summarize_tool_use(log: list[dict]) -> dict:
+    """把原始呼叫日誌整理成可讀的工具使用摘要。"""
+    ok_by_type = Counter(c["query_type"] for c in log if c["ok"])
+    failed = [c["query_type"] for c in log if not c["ok"]]
+    used = set(ok_by_type)
+    coverage = len(ESSENTIAL_QUERIES & used) / len(ESSENTIAL_QUERIES)
+    return {
+        "total_calls": len(log),
+        "ok_by_type": dict(ok_by_type),
+        "failed_calls": failed,
+        "essential_coverage": round(coverage, 4),
+        "missing_essential": sorted(ESSENTIAL_QUERIES - used),
+        "used_bonus": sorted(BONUS_QUERIES & used),
+    }
+
+
+def _result(score: float, artifacts: dict = None):
+    """統一的回傳包裝。優先用 EvaluationResult（帶 artifacts），
+    若 OpenEvolve 不可用（例如本地直接跑）則 graceful 退回 dict。"""
+    artifacts = artifacts or {}
+    try:
+        from openevolve.evaluation_result import EvaluationResult
+        return EvaluationResult(
+            metrics={"combined_score": float(score)},
+            artifacts={k: (v if isinstance(v, (str, bytes)) else json.dumps(v, ensure_ascii=False))
+                       for k, v in artifacts.items()},
+        )
+    except ImportError:
+        return {"combined_score": float(score)}
 
 # ---------------------------------------------------------------------------
 # Lazy singleton: Simulator is expensive to initialize (loads LMDB dataset).
@@ -59,6 +102,9 @@ def evaluate(program_path: str) -> dict:
         num_tasks = int(os.environ.get("OPENEVOLVE_NUM_TASKS", 5))
         print(f"\n[Evaluator] Running simulation: {program_path}  (tasks={num_tasks}, timeout={SIM_TIMEOUT_SEC}s)")
 
+        # 清掉上一輪可能殘留的工具呼叫日誌（例如上一輪 timeout 中斷留下的）
+        drain_tool_log()
+
         # Hard timeout 包住整個 simulation。如果 simulator/CrewAI/LiteLLM 內部卡住
         # （例如 rate limit retry 死循環），這層會在 SIM_TIMEOUT_SEC 後強制中止，
         # 讓 evaluator 回傳 fallback 分數讓 OpenEvolve 能繼續下一個 iteration。
@@ -73,7 +119,11 @@ def evaluate(program_path: str) -> dict:
                 future.result(timeout=SIM_TIMEOUT_SEC)
         except FuturesTimeout:
             print(f"[Evaluator] ⏱  Simulation exceeded {SIM_TIMEOUT_SEC}s — returning fallback score")
-            return {"combined_score": 0.0}
+            tool_summary = _summarize_tool_use(drain_tool_log())
+            return _result(0.0, {"failure_stage": "timeout", "tool_use": tool_summary})
+
+        # 取走本輪的工具呼叫日誌
+        tool_summary = _summarize_tool_use(drain_tool_log())
 
         # 2. Compute official metrics
         # eval_results structure:
@@ -86,19 +136,32 @@ def evaluate(program_path: str) -> dict:
         pref_estimation   = metrics.get("preference_estimation", 0.0)
         review_generation = metrics.get("review_generation", 0.0)
 
+        # 可選的 coverage-aware shaping（預設 PENALTY=0 → shaped == raw）
+        coverage = tool_summary["essential_coverage"]
+        shaped = overall_quality * (1.0 - TOOL_COVERAGE_PENALTY * (1.0 - coverage))
+
+        shaping_note = "" if TOOL_COVERAGE_PENALTY == 0 else \
+            f"  →  shaped={shaped:.4f} (coverage={coverage:.2f}, penalty={TOOL_COVERAGE_PENALTY})"
         print(
             f"[Evaluator] preference_estimation={pref_estimation:.4f}, "
             f"review_generation={review_generation:.4f}, "
-            f"overall_quality={overall_quality:.4f}  →  combined_score={overall_quality:.4f}"
+            f"overall_quality={overall_quality:.4f}  →  combined_score={overall_quality:.4f}{shaping_note}"
         )
+        print(f"[Evaluator] tool_use: {tool_summary}")
 
-        return {"combined_score": float(overall_quality)}
+        artifacts = {
+            "tool_use": tool_summary,
+            "preference_estimation": round(pref_estimation, 4),
+            "review_generation": round(review_generation, 4),
+            "raw_overall_quality": round(overall_quality, 4),
+        }
+        return _result(shaped, artifacts)
 
     except Exception as e:
         print(f"[Evaluator] ❌ Error during evaluation: {e}")
         import traceback
         traceback.print_exc()
-        return {"combined_score": 0.0}
+        return _result(0.0, {"failure_stage": "exception", "error": str(e)})
 
 
 if __name__ == "__main__":
