@@ -196,6 +196,40 @@ After:   serving_flow → execute_policy(retrieval_policy) → retrieved_context
 > 把「值得進化的部分」（檢索策略 + 萃取 prompt）**留在**進化空間。
 > 進化從此在「最壞只是低分」的安全地形上探索，不再有「改壞 prompt → 崩潰」的懸崖。
 
+### 6.5 工具使用者的轉變（L1 接線前後）
+
+L1 接線最根本的改變是**「誰在使用工具」**。一句話：**接線後，沒有任何 CrewAI
+agent 在使用工具了**——查資料的工作從 agent 手上移到確定性的 executor。
+
+**接線前**
+```
+data_retriever（agent）── 綁 @tool ──> interaction_tool_wrapper ──> InteractionTool
+   LLM 用 ReAct 文字格式「主動」呼叫工具 4 次  ← 使用者是 LLM，會崩潰的那種
+```
+
+**接線後（現在）**
+```
+serving_flow（crew 啟動前）
+   └─ get_injected_tool() 拿到 InteractionTool
+   └─ execute_policy(...) ──直接呼叫──> InteractionTool.get_user/get_item/get_reviews
+   └─ 結果存成 retrieved_context，注入 crew inputs
+data_retriever（agent）── 無工具 ──> 只萃取 {retrieved_context}（純文字任務）
+```
+
+| 角色 | 接線後還用工具？ | 說明 |
+|------|:---:|------|
+| `retrieval_executor` | ✅ **唯一的真正使用者** | crew 啟動前確定性查資料 |
+| `data_retriever`（agent） | ❌ | 變萃取者，只處理已給的文字 |
+| `psychological_analyst` | ❌ | 本來就沒工具 |
+| `behavior_simulator` | ❌ | 本來就沒工具 |
+
+**副產物：`interaction_tool_wrapper`（@tool）成為孤兒**
+唯一綁它的 data_retriever 在接線時拿掉了 `tools=[...]`，所以 `get_interaction_tool()`
+與被 `@tool` 裝飾的 `interaction_tool_wrapper` 已**無人呼叫**。但其所在模組仍存活，
+因為這些函式還有人用：`inject_simulator_tool()`（workflow 注入）、`get_injected_tool()`
+（serving_flow 拿 tool 給 executor）、`_record()` / `drain_tool_log()`（L0 觀測）。
+孤兒部分暫不清除——L2 可能復用其注入機制，待 L2 塵埃落定再評估（見 §14 待辦）。
+
 ---
 
 ## 7. L2 — 讓 OpenEvolve 創造新工具（設計，尚未實作）
@@ -305,7 +339,8 @@ grounding 洩漏（排除測試樣本）、reward hacking（避免語意檢索�
 | **L1** clamp 直譯器（executor + 22 單元測試） | ✅ merged | #7 |
 | **L1** 接線（executor → pipeline，7 檔案） | ✅ merged | #8 |
 | 設計文件落地 | ✅ merged | #9 |
-| **#7** Train-Val 切分（holdout 驗證機制） | ✅ PR open | #10 |
+| **#7** Train-Val 切分（holdout 驗證機制） | ✅ merged | #10 |
+| **#6** MAP-Elites 自訂維度（preference × review） | 🔵 PR open | #11 |
 | L2 工具生成（AST 沙箱） | ⬜ 設計完成 | — |
 | Tier C 能力註冊表（RagTool） | ⬜ 設計完成 | — |
 
@@ -389,6 +424,37 @@ make validate-holdout
 **限制**：train 仍只有 5 個樣本，統計噪音大；holdout 機制已就緒，但要降低噪音需
 擴大 train 樣本數（資料源 `dummy_dataset/test_review_subset.json` 有 198 筆可取）。
 
+### 12.6 #6 MAP-Elites 自訂維度實作摘要
+
+**目的**：`combined_score = (preference_estimation + review_generation) / 2`，這兩個分項
+常此消彼長（評分超準但文字平庸／文字好但評分差）。用單一 combined_score 當唯一座標，
+會把兩種極端高手都壓成中間值而淘汰。改用這兩個分項當 MAP-Elites 的 **diversity 維度**，
+能保留「評分準度 × 文字擬真度」二維網格的各路精英，看見 trade-off 前沿並雜交出兼顧者。
+
+**關鍵分工**（OpenEvolve 的 fitness vs feature 機制）：
+- `combined_score` 仍是 **fitness**（決定誰勝出）
+- `preference_estimation` / `review_generation` 是 **feature dimensions**（決定多樣性座標，
+  不影響勝負）——OpenEvolve 規則：有 combined_score 就用它當 fitness，feature_dimensions
+  列出的 metric 只作座標。
+
+**改動**：
+- `openevolve_evaluator.py`：`_result()` 加 `extra_metrics` 參數，把
+  `preference_estimation` / `review_generation` 一併放進 **metrics**（原本只在 artifacts）。
+  三條 return 路徑（成功／timeout／exception）都提供這兩個 metric，避免 MAP-Elites 缺維度。
+- `config/openevolve_config.yaml`：`feature_dimensions: [preference_estimation, review_generation]`，
+  `feature_bins: 8`（8×8 = 64 cells）。raw 連續 0–1 值，**非 bin index**（符合官方警告）。
+- 順手修 `system_message`：移除 L1 接線前殘留的「data_retriever 必須遵循 tool-calling 格式」
+  舊規則，改述其新職責（萃取者，不呼叫工具）+ 說明可調 `retrieval_policy`。
+
+**驗證數據**：
+- config 載入：`feature_dimensions=['preference_estimation','review_generation']`, `bins=8` ✅
+- 真實 1-task evaluate 回傳 metrics：
+  `{combined_score:0.6998, preference_estimation:0.70, review_generation:0.6997}` ✅
+  （三值齊備：1 個 fitness + 2 個 feature 座標）
+
+**觀測建議**：跑進化後用 visualizer 看 MAP-Elites 網格，即可直接觀察「評分準度 vs
+文字擬真度」的 trade-off 前沿——這也是很好的教學展示。
+
 ---
 
 ## 13. 後續工作的相互關係（L2 / #6 / #7）
@@ -452,9 +518,12 @@ L2 工具生成         ← 最後。此時已有 holdout 照妖鏡 + n_tools �
 - [ ] **Tier C**（RagTool registry + portfolio）實作
 - [ ] **L5 rate limit**：CrewAI 端 `max_rpm` / `litellm_params`（目前裸露）
 - [x] **方向 #7 Train/Val 切分**：已建立 disjoint holdout 機制（見下方「#7 實作摘要」）。後續仍可擴大 train 樣本數降低噪音
-- [ ] **方向 #6 MAP-Elites 自訂維度**：用 `preference_estimation × review_generation` 看 trade-off 前沿
+- [x] **方向 #6 MAP-Elites 自訂維度**：已用 `preference_estimation × review_generation` 當 feature dims（見 §12.6）。後續可跑進化看 trade-off 前沿
 - [ ] 完整 50-iter 進化（需在不受 session 上限影響的環境跑）
 - [ ] coverage penalty A/B：`OPENEVOLVE_TOOL_COVERAGE_PENALTY` 是否真的有助於收斂
+- [ ] **清理孤兒 @tool**：L1 接線後 `interaction_tool_wrapper`（@tool）與
+  `get_interaction_tool()` 已無人呼叫（見 §6.5）。**待 L2 完成後評估是否移除**——
+  L2 可能復用其注入機制，故暫留。
 
 ---
 

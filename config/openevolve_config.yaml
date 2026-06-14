@@ -39,12 +39,17 @@ prompt:
     You are evolving the configuration (role, goal, backstory) of three CrewAI agents
     that simulate user behavior on a review platform:
 
-    1. data_retriever        – retrieves user profile, item details, user's historical reviews,
-                                and item's historical reviews via a fixed ReAct tool-calling protocol.
-                                Its task description (NOT shown here) hard-codes the exact 4 tool
-                                calls it must make.
+    1. data_retriever        – the background data is ALREADY fetched deterministically
+                                (by a frozen retrieval executor) and injected into its task as
+                                {retrieved_context}. This agent does NOT call any tool; it only
+                                extracts and structures the already-retrieved data.
     2. psychological_analyst – analyses user preference and rating habits from retrieved data
     3. behavior_simulator    – embodies the user persona and produces a star rating + review text
+
+    The EVOLVE-BLOCK also contains a `retrieval_policy` (queries / review_sampling /
+    max_chars_per_result) that controls WHAT data the executor fetches and HOW it samples
+    reviews. Any malformed policy value is automatically clamped to a safe default, so you
+    may tune it freely.
 
     Your goal is to rewrite the EVOLVE-BLOCK section so that the agents produce
     star ratings closer to the user's actual historical average and reviews that
@@ -52,9 +57,9 @@ prompt:
 
     Rules:
     - Keep the YAML structure valid. Do NOT change the `llm:` field of any agent.
-    - For data_retriever, you MAY evolve role/goal/backstory, but the backstory MUST
-      explicitly remind the agent to follow the tool-calling format from its task
-      description verbatim. Do NOT instruct it to skip queries or invent new ones.
+    - For data_retriever, you MAY evolve role/goal/backstory; it is now an EXTRACTOR,
+      not a tool caller — do NOT instruct it to call tools or follow a tool-calling format.
+    - You MAY tune retrieval_policy (which queries, sampling strategy, k, char budget).
     - For psychological_analyst and behavior_simulator, freely evolve all three fields
       to improve rating accuracy and review fidelity.
     - Return the complete YAML file with EVOLVE-BLOCK-START and EVOLVE-BLOCK-END markers.
@@ -71,10 +76,16 @@ database:
   exploitation_ratio: 0.7
   migration_interval: 10
   migration_rate: 0.1
-  # Use built-in features; no custom feature_dimensions needed
+  # Custom MAP-Elites feature dimensions (returned by the evaluator as raw
+  # continuous 0–1 values, NOT bin indices). These two sub-metrics often trade
+  # off against each other, so mapping them as the diversity grid preserves both
+  # "accurate rating but plain text" and "vivid text but off rating" elites,
+  # letting the evolution surface the trade-off frontier and breed hybrids.
+  # combined_score remains the fitness; these only set the diversity coordinates.
   feature_dimensions:
-    - "complexity"
-    - "diversity"
+    - "preference_estimation"   # rating accuracy (1 - normalized star MAE)
+    - "review_generation"       # review text fidelity (sentiment+emotion+topic)
+  feature_bins: 8               # 8×8 grid = 64 cells
 
 # ── Evaluator ────────────────────────────────────────────────────────────────
 evaluator:

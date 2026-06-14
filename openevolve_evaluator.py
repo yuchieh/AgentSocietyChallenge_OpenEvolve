@@ -44,19 +44,28 @@ def _summarize_tool_use(log: list[dict]) -> dict:
     }
 
 
-def _result(score: float, artifacts: dict = None):
+def _result(score: float, artifacts: dict = None, extra_metrics: dict = None):
     """統一的回傳包裝。優先用 EvaluationResult（帶 artifacts），
-    若 OpenEvolve 不可用（例如本地直接跑）則 graceful 退回 dict。"""
+    若 OpenEvolve 不可用（例如本地直接跑）則 graceful 退回 dict。
+
+    metrics 一定含 combined_score（OpenEvolve 用它當 fitness）。
+    extra_metrics（如 preference_estimation / review_generation）會併入 metrics，
+    供 MAP-Elites 當 feature dimensions 使用——OpenEvolve 仍以 combined_score 為
+    fitness，feature_dimensions 列出的 metric 只決定多樣性座標，不影響勝負。
+    """
     artifacts = artifacts or {}
+    metrics = {"combined_score": float(score)}
+    if extra_metrics:
+        metrics.update({k: float(v) for k, v in extra_metrics.items()})
     try:
         from openevolve.evaluation_result import EvaluationResult
         return EvaluationResult(
-            metrics={"combined_score": float(score)},
+            metrics=metrics,
             artifacts={k: (v if isinstance(v, (str, bytes)) else json.dumps(v, ensure_ascii=False))
                        for k, v in artifacts.items()},
         )
     except ImportError:
-        return {"combined_score": float(score)}
+        return metrics
 
 # ---------------------------------------------------------------------------
 # Lazy singleton: Simulator is expensive to initialize (loads LMDB dataset).
@@ -124,7 +133,8 @@ def evaluate(program_path: str) -> dict:
         except FuturesTimeout:
             print(f"[Evaluator] ⏱  Simulation exceeded {SIM_TIMEOUT_SEC}s — returning fallback score")
             tool_summary = _summarize_tool_use(drain_tool_log())
-            return _result(0.0, {"failure_stage": "timeout", "tool_use": tool_summary})
+            return _result(0.0, {"failure_stage": "timeout", "tool_use": tool_summary},
+                           extra_metrics={"preference_estimation": 0.0, "review_generation": 0.0})
 
         # 取走本輪的工具呼叫日誌
         tool_summary = _summarize_tool_use(drain_tool_log())
@@ -159,13 +169,19 @@ def evaluate(program_path: str) -> dict:
             "review_generation": round(review_generation, 4),
             "raw_overall_quality": round(overall_quality, 4),
         }
-        return _result(shaped, artifacts)
+        # preference_estimation / review_generation 同時放進 metrics 供 MAP-Elites
+        # 當 feature dimensions（多樣性座標）；combined_score 仍是 fitness。
+        return _result(shaped, artifacts, extra_metrics={
+            "preference_estimation": pref_estimation,
+            "review_generation": review_generation,
+        })
 
     except Exception as e:
         print(f"[Evaluator] ❌ Error during evaluation: {e}")
         import traceback
         traceback.print_exc()
-        return _result(0.0, {"failure_stage": "exception", "error": str(e)})
+        return _result(0.0, {"failure_stage": "exception", "error": str(e)},
+                       extra_metrics={"preference_estimation": 0.0, "review_generation": 0.0})
 
 
 if __name__ == "__main__":
