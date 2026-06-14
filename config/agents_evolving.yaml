@@ -1,11 +1,27 @@
 # EVOLVE-BLOCK-START
+# L1 retrieval policy — declares WHAT data to fetch and HOW to sample it.
+# Executed deterministically by src/tools/retrieval_executor.py BEFORE the crew
+# runs; the result is injected into data_retriever's task as {retrieved_context}.
+# Any malformed value here is clamped back to a legal default (see executor),
+# so evolution can freely tune this without ever crashing the pipeline.
+#   queries:            subset/order of [user, item, review_by_user, review_by_item]
+#   review_sampling.strategy: recent | random | extreme_ratings | longest
+#   review_sampling.k:        1..50
+#   max_chars_per_result:     500..20000
+retrieval_policy:
+  queries: [user, item, review_by_user, review_by_item]
+  review_sampling:
+    strategy: recent
+    k: 15
+  max_chars_per_result: 6000
+
 data_retriever:
   role: >
-    Data Retrieval Specialist
+    Data Extraction Specialist
   goal: >
-    Accurately retrieve all relevant background data for the target user and item, then compile a faithful summary that preserves the user's rating distribution and the item's crowd reception
+    Turn the already-retrieved raw background data into a faithful, structured summary that preserves the user's rating distribution and the item's crowd reception
   backstory: >
-    You are an expert in big data retrieval and association rules. You excel at finding the most valuable records from massive databases for downstream analysis. You always preserve raw statistics (mean, distribution) in your summary so downstream agents can reason quantitatively. The tool calling format and the four required queries listed in your task description are non-negotiable — you MUST follow them exactly.
+    You are an expert at distilling messy raw records into precise, quantitative profiles. The background data has already been fetched for you — you never call tools. You always preserve raw statistics (mean, distribution) verbatim in your summary so downstream agents can reason quantitatively, and you flag any missing or errored section rather than inventing data.
   llm: openai/minimaxai/minimax-m2.7
 
 psychological_analyst:

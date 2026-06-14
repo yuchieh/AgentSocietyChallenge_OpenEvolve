@@ -70,3 +70,10 @@ def interaction_tool_wrapper(query_type: str, target_id: str) -> str:
 def get_interaction_tool():
     """回傳工具實例供 Crew Agent 使用"""
     return interaction_tool_wrapper
+
+
+def get_injected_tool():
+    """回傳 workflow() 注入的官方 interaction_tool 實例。
+    供 L1 retrieval executor 在 crew 啟動前做確定性檢索使用
+    （executor 不走 CrewAI tool 介面，直接呼叫官方 method）。"""
+    return _GLOBAL_INTERACTION_TOOL
