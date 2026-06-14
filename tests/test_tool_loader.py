@@ -181,6 +181,28 @@ class TestLoadEvolvedTools(unittest.TestCase):
         self.assertEqual(report["loaded"], ["tool_real"])
 
 
+# ── Gate 4: wrap=True produces usable CrewAI tools (regression: @tool needs docstring) ──
+class TestWrapIntegration(unittest.TestCase):
+    def test_wrap_true_produces_crewai_tool(self):
+        src = ("def tool_x(kit, user_id, item_id):\n"
+               "    '''my tool doc'''\n"
+               "    return 'ok'\n")
+        tools, report = load_evolved_tools(src, FakeInteractionTool(), fixture=("u", "i"), wrap=True)
+        self.assertEqual(report["loaded"], ["tool_x"])
+        self.assertEqual(len(tools), 1)
+        self.assertEqual(tools[0].name, "tool_x")
+        self.assertIn("my tool doc", tools[0].description)
+
+    def test_wrap_true_tool_without_docstring_still_wraps(self):
+        # the exact bug hit in Phase 2: CrewAI @tool requires a docstring;
+        # the wrapper must supply a fallback so a docstring-less tool still wraps.
+        src = ("def tool_nodoc(kit, user_id, item_id):\n"
+               "    return 'ok'\n")
+        tools, report = load_evolved_tools(src, FakeInteractionTool(), fixture=("u", "i"), wrap=True)
+        self.assertEqual(len(tools), 1)
+        self.assertEqual(tools[0].name, "tool_nodoc")
+
+
 # ── The shipped seed tools must actually load ──
 class TestSeedTools(unittest.TestCase):
     def test_seed_file_loads(self):
