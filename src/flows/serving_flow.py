@@ -62,18 +62,47 @@ class AgentSocietyServingFlow(Flow[InferenceState]):
 
     @listen(init_request)
     def trigger_crew_inference(self):
-        # 定義傳遞到任務 {user_id} 與 {item_id} 變數的值
+        import os
+        import yaml
+
+        # 載入設定來源：OpenEvolve 進化時為突變後的 YAML，否則為正式 agents.yaml。
+        cfg = None
+        if self.agents_config_path:
+            with open(self.agents_config_path, "r", encoding='utf-8') as f:
+                cfg = yaml.safe_load(f)
+        else:
+            default_path = os.path.join(
+                os.path.dirname(__file__), "..", "..", "config", "agents.yaml"
+            )
+            try:
+                with open(default_path, "r", encoding='utf-8') as f:
+                    cfg = yaml.safe_load(f)
+            except Exception:
+                cfg = None
+
+        retrieval_policy = cfg.get("retrieval_policy") if isinstance(cfg, dict) else None
+
+        # L1：crew 啟動前，由 retrieval_executor 確定性地完成檢索。
+        # clamp 保證 policy 缺失/malformed 也安全退回預設；tool 缺失則留空 context。
+        from src.tools.interaction_tool_wrapper import get_injected_tool
+        from src.tools.retrieval_executor import execute_policy
+        tool = get_injected_tool()
+        retrieved_context = (
+            execute_policy(retrieval_policy, tool, self.state.user_id, self.state.item_id)
+            if tool is not None else ""
+        )
+
+        # 定義傳遞到任務 {user_id} {item_id} {retrieved_context} 變數的值
         inputs = {
             'user_id': self.state.user_id,
-            'item_id': self.state.item_id
+            'item_id': self.state.item_id,
+            'retrieved_context': retrieved_context,
         }
-        
+
         # 啟動並執行 Crew AI 團隊
         crew_instance = SimulationCrew()
-        if self.agents_config_path:
-            import yaml
-            with open(self.agents_config_path, "r", encoding='utf-8') as f:
-                crew_instance.agents_config = yaml.safe_load(f)
+        if self.agents_config_path and isinstance(cfg, dict):
+            crew_instance.agents_config = cfg
 
         result = crew_instance.crew().kickoff(inputs=inputs)
         

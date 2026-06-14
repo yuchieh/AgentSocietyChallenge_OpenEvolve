@@ -165,7 +165,20 @@ def execute_policy(policy: Any, interaction_tool: Any, user_id: str, item_id: st
                 continue
             text = str(data)[: p["max_chars_per_result"]]
             parts.append(f"## {q}\n{text}")
+            _record_query(q, ok=True)
         except Exception as e:  # noqa: BLE001 — never let one query crash the run
             parts.append(f"## {q}\n(retrieval error: {e})")
+            _record_query(q, ok=False)
 
     return "\n\n".join(parts)
+
+
+def _record_query(query_type: str, ok: bool) -> None:
+    """Feed the executor's deterministic queries into the same L0 tool-call log,
+    so observability/coverage metrics stay meaningful after L1 takes over
+    retrieval from the LLM. Soft dependency — never let logging break execution."""
+    try:
+        from src.tools.interaction_tool_wrapper import _record
+        _record(query_type, ok)
+    except Exception:  # noqa: BLE001
+        pass

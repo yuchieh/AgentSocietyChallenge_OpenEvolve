@@ -2,23 +2,23 @@ import os
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-# 根據目錄結構加載自訂的工具層
-from src.tools.interaction_tool_wrapper import get_interaction_tool
-
 @CrewBase
 class SimulationCrew():
     """Simulation Crew for generating user review simulation"""
-    
+
     # 指向剛才撰寫好的 YAML 配置檔
     agents_config = '../../config/agents.yaml'
     tasks_config = '../../config/tasks.yaml'
 
     @agent
     def data_retriever(self) -> Agent:
+        # L1 接線後 data_retriever 不再呼叫工具：檢索已由 retrieval_executor
+        # 在 crew 啟動前確定性完成，並透過 {retrieved_context} 注入 task。
+        # 這個 agent 現在的職責是「萃取／結構化」已檢索好的資料，是純文字任務，
+        # 不會有 ReAct 工具呼叫失效的風險。
         return Agent(
             config=self.agents_config['data_retriever'],
-            verbose=False,
-            tools=[get_interaction_tool()] # 綁定我們的注入式 Tool wrapper
+            verbose=False
         )
 
     @agent
