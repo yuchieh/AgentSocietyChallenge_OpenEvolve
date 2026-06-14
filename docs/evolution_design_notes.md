@@ -22,7 +22,8 @@
 10. [Rate Limit 的五層防護](#10-rate-limit-的五層防護)
 11. [實作進度與 PR 對照](#11-實作進度與-pr-對照)
 12. [驗證數據](#12-驗證數據)
-13. [待辦與未解問題](#13-待辦與未解問題)
+13. [後續工作的相互關係（L2 / #6 / #7）](#13-後續工作的相互關係l2--6--7)
+14. [待辦與未解問題](#14-待辦與未解問題)
 
 ---
 
@@ -303,6 +304,8 @@ grounding 洩漏（排除測試樣本）、reward hacking（避免語意檢索�
 | **L0** 工具可觀測性 | ✅ merged | #5 |
 | **L1** clamp 直譯器（executor + 22 單元測試） | ✅ merged | #7 |
 | **L1** 接線（executor → pipeline，7 檔案） | ✅ merged | #8 |
+| 設計文件落地 | ✅ merged | #9 |
+| **#7** Train-Val 切分（holdout 驗證機制） | ✅ PR open | #10 |
 | L2 工具生成（AST 沙箱） | ⬜ 設計完成 | — |
 | Tier C 能力註冊表（RagTool） | ⬜ 設計完成 | — |
 
@@ -353,12 +356,102 @@ Failure Taxonomy 進度：
 
 ---
 
-## 13. 待辦與未解問題
+### 12.5 #7 Train-Val 切分實作摘要
+
+**機制**：把評估任務分成兩組 disjoint 集合——
+- `dummy_tasks/`（train，5 個）：進化時 evaluator 預設使用
+- `holdout_tasks/`（holdout，5 個）：只用於事後驗證，**與 train 無重疊**
+
+**改動**：
+- `src/utils/create_sampled_dataset.py`：加 `--exclude`（排除某 task dir 已用的
+  (user_id,item_id)，確保 holdout 與 train disjoint）與 `--seed`；順手修 default
+  input 路徑 `data/` → `dummy_dataset/`（PR #4 漏改）。
+- `openevolve_evaluator.py`：`_get_simulator()` 改讀 `OPENEVOLVE_TASK_DIR` /
+  `OPENEVOLVE_GT_DIR` env var（預設 train），讓同一個 evaluator 能切到 holdout。
+- `scripts/validate_holdout.py`：載入指定 YAML，對 holdout 跑 evaluate，回報
+  holdout 分數；預設驗證 `best_program.yaml`（無則 `config/agents.yaml`）。
+- `Makefile`：`make validate-holdout [YAML=path]`。
+
+**用法**：
+```bash
+# 進化（train，不變）
+make evolve ITERS=50 TASKS=1
+# 進化後驗證最佳個體是否過擬合
+make validate-holdout
+# train - holdout 差距大 => 過擬合
+```
+
+**驗證數據**（baseline `config/agents.yaml`，1 task）：
+- disjoint 檢查：train=5, holdout=5, overlap=**0** ✅
+- holdout 路徑端到端：`task_dir=holdout_tasks`、tool_use coverage=1.0
+- **HOLDOUT combined_score = 0.8601**（單 task，僅證明機制運作；多 task 才有統計意義）
+
+**限制**：train 仍只有 5 個樣本，統計噪音大；holdout 機制已就緒，但要降低噪音需
+擴大 train 樣本數（資料源 `dummy_dataset/test_review_subset.json` 有 198 筆可取）。
+
+---
+
+## 13. 後續工作的相互關係（L2 / #6 / #7）
+
+三者之間**沒有硬性技術依賴**（誰都不 import 誰、都能獨立跑），但有重要的方法論順序與協同。
+
+### 三種關係
+
+| 關係類型 | 意思 | 存在嗎 |
+|---------|------|--------|
+| 硬依賴（build/runtime） | A 沒做 B 就無法運作/報錯 | ❌ 完全沒有 |
+| 方法論依賴 | A 沒做，B 的結果無法被信任 | ✅ 有一條關鍵的 |
+| 協同增強 | A 做了讓 B 更有價值 | ✅ 有一對很強的 |
+
+### 逐對分析
+
+**L2 ↔ #7（Train-Val 切分）— ⭐ 方法論依賴（最關鍵）**
+L2 大幅擴大搜尋空間 → 過擬合與 reward-hacking 風險升高。沒有 holdout，**分不清 L2 的「進步」是真聰明還是背了那幾題的答案**。L2 不 import #7，但 **#7 是 L2 結果可信度的前提**。
+
+**L2 ↔ #6（MAP-Elites 自訂維度）— 強協同**
+L2 設計裡「把 `n_tools` 設為 feature dimension」正是 #6。有了 #6，MAP-Elites 會保留「精簡派 → 重裝派」各路精英，直接回答 L2 的核心問題「工具越多越好嗎」。#6 不是 L2 前提，但大幅放大 L2 的探索品質與可解釋性。
+
+**#6 ↔ #7 — 幾乎正交**
+#6 改「多樣性地圖維度」（探索結構），#7 改「fitness 可信度」（評估結構），動的是不同部位，可獨立任意順序。
+
+### 關係圖
+
+```
+                    擴大搜尋空間（重量級）
+                          L2 工具生成
+                         ╱            ╲
+              方法論依賴 ╱              ╲ 強協同
+        （先有照妖鏡）  ╱                ╲（n_tools 維度）
+                      ╱                  ╲
+            #7 Train-Val            #6 MAP-Elites 自訂維度
+            （fitness 可信度）  正交   （探索結構）
+```
+
+### 關鍵洞察與建議順序
+
+`#6 / #7` 是「改善衡量與探索機制」（輕量，只改 evaluator+config，不擴大搜尋空間）；
+`L2` 是「擴大能力範圍」（重量，大幅擴大搜尋空間）。
+**先把尺量準（#7）、地圖畫好（#6），再放生更強的探索者（L2）**：
+
+```
+#7 Train-Val 切分   ← 先做。輕量，是 L2 的驗證地基，也立刻揭露現有過擬合
+       ↓
+#6 MAP-Elites 維度  ← 再做。輕量，為 L2 準備好 n_tools 維度
+       ↓
+L2 工具生成         ← 最後。此時已有 holdout 照妖鏡 + n_tools 地圖，
+                      能可信評估「進化發明的工具」是否有普遍價值
+```
+
+> 這是建議順序，非硬性。L2 可獨立先做（會跑、有測試），只是屆時缺乏判斷其進步真假的工具。
+
+---
+
+## 14. 待辦與未解問題
 
 - [ ] **L2 工具生成**實作（AST 沙箱 + evolvable_tools + tool_loader 四道關卡）
 - [ ] **Tier C**（RagTool registry + portfolio）實作
 - [ ] **L5 rate limit**：CrewAI 端 `max_rpm` / `litellm_params`（目前裸露）
-- [ ] **方向 #7 Train/Val 切分**：5 task 樣本過擬合風險（同一 YAML 兩次評估 0.66 vs 0.28）
+- [x] **方向 #7 Train/Val 切分**：已建立 disjoint holdout 機制（見下方「#7 實作摘要」）。後續仍可擴大 train 樣本數降低噪音
 - [ ] **方向 #6 MAP-Elites 自訂維度**：用 `preference_estimation × review_generation` 看 trade-off 前沿
 - [ ] 完整 50-iter 進化（需在不受 session 上限影響的環境跑）
 - [ ] coverage penalty A/B：`OPENEVOLVE_TOOL_COVERAGE_PENALTY` 是否真的有助於收斂
