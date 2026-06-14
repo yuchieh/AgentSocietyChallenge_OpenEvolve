@@ -1,0 +1,368 @@
+# Evolution Design Notes — OpenEvolve × CrewAI Agent Optimization
+
+> 本文件記錄我們運用 **OpenEvolve** 優化 CrewAI Agent Crew 設計的整體思路、
+> 探索方向、以及 **Tool Calling Failure Taxonomy** 的設計、實作與驗證數據。
+>
+> **維護慣例**：之後每完成一項相關工作，會詢問是否要追加到本文件。
+> 已落地的工作在「實作進度」表附上對應 PR 編號。
+
+---
+
+## 目錄
+
+1. [背景與目標](#1-背景與目標)
+2. [可優化面向總覽（10 個方向）](#2-可優化面向總覽10-個方向)
+3. [Tool Calling Failure Taxonomy](#3-tool-calling-failure-taxonomy)
+4. [協議／策略分離原則](#4-協議策略分離原則)
+5. [L0 — 工具呼叫可觀測性](#5-l0--工具呼叫可觀測性)
+6. [L1 — 安全進化工具使用策略](#6-l1--安全進化工具使用策略)
+7. [L2 — 讓 OpenEvolve 創造新工具（設計，尚未實作）](#7-l2--讓-openevolve-創造新工具設計尚未實作)
+8. [Tier C — 現成生態工具（RagTool，設計）](#8-tier-c--現成生態工具ragtool設計)
+9. [EVOLVE-BLOCK 機制的真相](#9-evolve-block-機制的真相)
+10. [Rate Limit 的五層防護](#10-rate-limit-的五層防護)
+11. [實作進度與 PR 對照](#11-實作進度與-pr-對照)
+12. [驗證數據](#12-驗證數據)
+13. [待辦與未解問題](#13-待辦與未解問題)
+
+---
+
+## 1. 背景與目標
+
+本 repo 在競賽框架 `websocietysimulator` + CrewAI 三代理流水線之上，整合
+OpenEvolve 做**進化式 prompt / 設計最佳化**。核心任務（Track 1）是預測某
+用戶對某商家的評分與評論，fitness = `overall_quality`（評分準度 + 文字相似度）。
+
+**大方向問題**：「運用 OpenEvolve 來優化目前的 Agent Crew 設計各個不同面向」
+——不只進化 prompt 文字，還包括 Crew 拓撲、工具使用、任務設計等。
+
+CrewAI 三代理流水線（進化前）：
+
+```
+data_retriever（有 tool）→ psychological_analyst → behavior_simulator
+   查 4 種資料              分析偏好                 產出 {stars, review}
+```
+
+---
+
+## 2. 可優化面向總覽（10 個方向）
+
+依「新穎性 × 可行性」排名，列出可用 OpenEvolve 探索的方向：
+
+| # | 方向 | 新穎性 | 可行性 | 改動範圍 |
+|---|------|:---:|:---:|------|
+| 1 | 結構化資料契約進化（解決 summary 壓縮瓶頸） | ★★★★ | ★★★★½ | tasks.yaml + block 範圍 |
+| 2 | 確定性檢索器：用 Python 進化取代 LLM data_retriever | ★★★★½ | ★★★★ | 新增 evolvable .py |
+| 3 | tasks.yaml 共同進化（含 ReAct 格式保護） | ★★★½ | ★★★★½ | 合併 YAML |
+| 4 | Crew 拓撲 DSL 進化（成員數 + 協作模式） | ★★★★★ | ★★★ | 新 spec + crew factory |
+| 5 | Artifacts 錯誤回饋通道 | ★★★ | ★★★★★ | 只改 evaluator |
+| 6 | MAP-Elites 自訂特徵維度 | ★★★ | ★★★★★ | evaluator + config |
+| 7 | Train/Validation 切分防過擬合 | ★★★ | ★★★★★ | evaluator + 資料 |
+| 8 | Island 種子分化（多設計哲學並行） | ★★★★½ | ★★★ | config + 初始族群 |
+| 9 | Cascade 兩階段評估（抗 rate limit） | ★★½ | ★★★★★ | evaluator 加兩函式 |
+| 10 | 階層式協作模式進化（hierarchical process） | ★★★★★ | ★★ | crew factory 大改 |
+
+> **共同約束**：實測最大瓶頸是 NVIDIA NIM rate limit（v3 進化 36% iteration 失敗）。
+> 凡能「減少每次 evaluate 的 LLM call 數」的方向（#2、#9）都有雙重價值。
+
+**目前進行中的主線**：方向 #2 的精神（把檢索從 LLM 移到確定性程式碼）已透過
+Tool Calling Failure Taxonomy 的 L1 落地。
+
+---
+
+## 3. Tool Calling Failure Taxonomy
+
+**起因**：v3 進化中，agent prompt 的突變曾導致 tool 呼叫失效，整個預測流程崩潰
+（多次落到 0.3515 fallback 分數）。我們需要一套架構，讓 agent 能安全地進化、
+使用不同工具、甚至創造新工具，而不會在工具呼叫上崩潰。
+
+把工具呼叫的失效拆成 **5 層**，每層需要不同防護：
+
+| 層 | 內容 | 進化會怎麼弄壞它 | 對應防護 |
+|---|------|----------------|---------|
+| **L1 呼叫協議** | ReAct 文字格式：`Action: ... Action Input: {JSON}` | 突變後 persona 讓 LLM 忘記/改寫格式 → parser 抓不到 → 幻覺資料 | tasks.yaml 凍結 → **L1 接線後徹底移除**（agent 不再呼叫） |
+| **L2 參數正確性** | `query_type` 必須是 4 個精確字串之一 | LLM 發明新 query_type | clamp 直譯器（L1 executor） |
+| **L3 呼叫策略** | 該呼叫哪些、幾次、順序 | 突變讓 agent「不查了直接猜」 | **L0 儀表化** + coverage 訊號 |
+| **L4 結果消化** | 上千筆 review 的截斷/取樣 | 無進化壓力優化 | L1 policy 的 `review_sampling` |
+| **L5 下游契約** | retriever summary → 下游 agent | summary 結構被突變改爛 | fitness 間接懲罰（仍裸露） |
+
+> **關鍵洞察**：原本只有 L1（靠 tasks.yaml 凍結）有防護，L2~L5 都靠 fitness
+> 噪音式間接懲罰。**fitness 只告訴進化「壞了」，不告訴它「哪裡壞了」**——這就是
+> 為什麼有些突變看似無害卻造成崩潰。
+
+---
+
+## 4. 協議／策略分離原則
+
+所有防護建立在這一條原則上：
+
+```
+┌──────────────────────────────────────────────────┐
+│  協議層（Protocol）— 凍結、機器驗證、程式碼強制      │
+│  「工具怎麼被呼叫」: 函式簽名、參數 schema、         │
+│  ReAct 格式、回傳格式、註冊機制                     │
+├──────────────────────────────────────────────────┤
+│  策略層（Policy）— 自由進化                         │
+│  「工具被怎麼使用」: 查什麼、查多少、何時查、         │
+│  怎麼消化結果、甚至「需要什麼新工具」                │
+└──────────────────────────────────────────────────┘
+```
+
+**安全憲法**：最壞情況 = 優雅退化（graceful degradation），絕不是災難性崩潰。
+
+---
+
+## 5. L0 — 工具呼叫可觀測性
+
+**目標**：把 L3（呼叫策略）從盲區變成可觀測訊號，**預設行為逐位元不變**。
+
+### 實作
+
+**`src/tools/interaction_tool_wrapper.py` — 儀表化**
+- thread-safe 呼叫日誌（`_TOOL_CALL_LOG` + `Lock`；Simulator `max_workers=2` 並行）
+- 每條路徑記錄 `(query_type, ok)`
+- `drain_tool_log()` 供 evaluator 取走+重置
+
+**`openevolve_evaluator.py` — artifacts + 可選 shaping**
+- simulation 前（清殘留）後（取結果）各 drain 一次
+- 摘要：`total_calls / ok_by_type / failed_calls / essential_coverage / missing_essential / used_bonus`
+- 回傳 `EvaluationResult` 帶 artifacts → 下一輪突變 prompt 看得到「`missing_essential: [user]`」
+- 可選 coverage penalty（env `OPENEVOLVE_TOOL_COVERAGE_PENALTY`，預設 0 = 不影響分數）：
+  `shaped = raw * (1 - PENALTY * (1 - essential_coverage))`
+
+### 設計重點
+- **觀測層增量**或 **env var opt-in**，預設與舊版完全相同
+- 為後續 L1 clamp、L2 quarantine 提供「看得見」的基礎——沒有 L0，後續效果只能瞎子摸象
+
+---
+
+## 6. L1 — 安全進化工具使用策略
+
+把工具呼叫從「LLM 主導（會崩潰）」變成「executor 確定性執行（clamp 保證安全）」。
+
+### 6.1 檢索策略 DSL
+
+進化端在 EVOLVE-BLOCK 內宣告 `retrieval_policy`：
+
+```yaml
+retrieval_policy:
+  queries: [user, item, review_by_user, review_by_item]   # 查哪些、順序
+  review_sampling:
+    strategy: recent      # recent | random | extreme_ratings | longest
+    k: 15                 # 1..50
+  max_chars_per_result: 6000   # 500..20000
+```
+
+凍結端 `src/tools/retrieval_executor.py` 直譯：
+- `ALLOWED_QUERIES` / `ALLOWED_STRATEGIES` 白名單
+- `normalize_policy()` — **clamp, don't reject**：非法值投影回合法空間，永不 raise
+- `execute_policy()` — 確定性檢索+格式化；per-query 失敗標註隔離
+- 把每個 query 記進 L0 log（檢索移離 LLM 後觀測仍有意義）
+
+### 6.2「白名單寫死 ≠ 沒有進化空間」
+
+關鍵釐清（這是最常見的誤解）：
+
+```
+ALLOWED_QUERIES = 「合法動作的字彙表」（what is permitted）   ← 凍結
+retrieval_policy = 「用這些字彙寫出的一句話」（what is chosen） ← 進化
+```
+
+白名單限制的是**字母表**，進化的是**用這些字母拼出的字串**。同一個白名單下，
+不同 policy（查哪些子集、什麼順序、取樣策略、k、截斷）餵給下游的 context 天差地別。
+直譯器寫死的是「安全邊界」，policy 是邊界內的某一個點。
+
+**真正的天花板是資料集**（只有 user/item/review 三張表），不是 `ALLOWED_QUERIES`
+這個 list——後者只是忠實反映底層資料邊界。
+
+### 6.3 接線：data_retriever 從「呼叫者」轉為「萃取者」
+
+```
+Before:  crew → data_retriever[有tool] → LLM ReAct 呼叫 wrapper x4 → summary
+After:   serving_flow → execute_policy(retrieval_policy) → retrieved_context
+         → crew → data_retriever[無tool] → LLM 萃取 {retrieved_context}
+```
+
+- `executor`（凍結+clamp）負責「抓對、抓全、永不崩潰」
+- `data_retriever`（LLM，可進化）負責「把原始資料萃取成洞察」——純文字任務，不會工具崩潰
+- serving_flow 從 `get_injected_tool()` 拿 live tool 給 executor（不碰不可修改的 `crewai_simulation_agent.py`）
+
+選項取捨：選保留 data_retriever（選項 Y）而非移除成 2-agent（選項 X）——改動可控、
+保留可進化的萃取步驟。選項 X 列為未來優化（省一個 LLM call）。
+
+### 6.4 這一步的精髓
+
+> 把「會崩潰的部分」（LLM 主導工具呼叫）從進化空間**移除**（交給 clamp executor）；
+> 把「值得進化的部分」（檢索策略 + 萃取 prompt）**留在**進化空間。
+> 進化從此在「最壞只是低分」的安全地形上探索，不再有「改壞 prompt → 崩潰」的懸崖。
+
+---
+
+## 7. L2 — 讓 OpenEvolve 創造新工具（設計，尚未實作）
+
+讓進化「發明新的派生計算工具」。關鍵認知：原始資料固定（三張表），所以「新工具」
+本質是**在固定資料上的新派生計算**——問題從「無界程式碼生成」收窄為「有界特徵工程」。
+
+### 架構：進化的工具模組 + 凍結的裝載器
+
+`evolvable_tools.py`（OpenEvolve 的 Python 模式 initial program）：
+
+```python
+# EVOLVE-BLOCK-START
+def tool_rating_distribution(kit, user_id, item_id) -> str:
+    """User's star-rating histogram and mean/std, for calibrating predictions."""
+    ...   # 進化空間：LLM 可發明全新 tool_xxx 函式
+# EVOLVE-BLOCK-END
+```
+
+凍結裝載器 `tool_loader.py` 四道關卡：
+1. **AST 安全掃描** — 禁止 `os/sys/subprocess/open/exec/eval` 等
+2. **簽名約定** — 只認 `tool_*` 前綴 + `(kit, user_id, item_id) -> str`
+3. **沙箱試跑** — fixture task 實跑，5 秒 timeout，壞工具**靜默丟棄**（非報錯）
+4. **自動包裝註冊** — docstring 成為 agent 看到的工具說明
+
+### 三個巧思
+- **docstring 共同進化**：CrewAI 把 tool description 給 agent 看。算得準但 docstring 含糊
+  → agent 不呼叫 → 零 fitness 貢獻 → 淘汰。「工具的可被發現性」受進化壓力。
+- **壞工具是「沉默的死基因」**：丟棄而非報錯，5 個壞 3 個剩 2 個照常，pipeline 永不崩潰。
+- **工具數量交給 MAP-Elites**：把 `n_tools` 設為 feature dimension，保留「精簡派」到
+  「重裝派」各路精英，讓進化回答「工具越多越好嗎」。
+
+### docstring 機制的精確因果鏈
+```
+docstring 品質 → agent 呼叫/不呼叫 → 資訊是否進入推理 → 預測準度
+            → combined_score → OpenEvolve selection → docstring 基因存續
+```
+agent 不「評判」docstring，它只是讀了決定用不用；真正的淘汰是 fitness + selection 做的。
+**credit assignment 限制**：fitness 是整包一個分數，docstring 搭順風車被選擇——靠 L0
+artifacts（哪些工具沒被呼叫）才能定向改進。
+
+---
+
+## 8. Tier C — 現成生態工具（RagTool，設計）
+
+把 CrewAI 生態的現成重型工具（如語意檢索 `RagTool`）納入安全進化。
+
+**為何不能套 L2**：RagTool 有狀態（需建索引）、初始化成本高、需配置、引入「語意相似度
+檢索」新能力。**不該讓 LLM 寫它的初始化程式碼**（會亂配 embedding/vectordb、每次重建索引）。
+
+**正確模式：能力註冊表（Capability Registry）+ 宣告式 portfolio**
+
+| Tier | 工具來源 | 進化方式 | 安全機制 |
+|------|---------|---------|---------|
+| A | 內建唯讀查詢 | 凍結 | 永遠可用 |
+| B | 派生計算工具（L2） | LLM 寫純函式 | AST 沙箱 + 唯讀 kit |
+| **C** | 現成生態工具（RagTool） | 從 registry 選用+配置 | 人類工廠 + 白名單 + clamp |
+
+人類寫安全工廠（`@lru_cache` 預建索引一次共享、**本地** embedding 避免 API 壓力、
+**只 index 訓練集且排除當前 task 的 groundtruth review**）；進化只在 portfolio 宣告
+「哪個 agent 配哪些工具、top_k 多少」。
+
+**四個陷阱**：索引重建成本（預建共享）、embedding API rate limit（用本地 MiniLM）、
+grounding 洩漏（排除測試樣本）、reward hacking（避免語意檢索撈回真實答案）。
+
+---
+
+## 9. EVOLVE-BLOCK 機制的真相
+
+深入 OpenEvolve 原始碼（`utils/code_utils.py`）後的發現：
+
+- `parse_evolve_blocks()` **存在但在核心進化迴圈中從未被呼叫**（`iteration.py` /
+  `process_parallel.py` / `controller.py` / `prompt/sampler.py` 都沒 import 它）
+- 進化引擎是把**整份程式（含 EVOLVE-BLOCK 標記文字）丟給 LLM**，標記只是**寫在 prompt
+  裡給 LLM 看的提示**，引擎不解析、不計數
+- 官方 `examples/README.md` 說「Exactly one EVOLVE-BLOCK」——這是**最佳實踐建議**
+  （多 block 收斂變慢），**不是技術硬限制**
+- `api.py`：完全沒 block 時自動把整體包成一個；有任意數量 block 時原樣傳遞
+
+**結論**：6 個 block 技術上能跑，但官方建議合併成 1 個。我們已合併。
+
+---
+
+## 10. Rate Limit 的五層防護
+
+| 層 | 位置 | 處理對象 |
+|---|------|---------|
+| L1 | `openevolve_config.yaml` `llm.retries=3, retry_delay=30` | OpenEvolve 突變 LLM 呼叫 |
+| L2 | `openevolve_evaluator.py` hard timeout 15min | 整個 simulation wall time |
+| L3 | `openevolve_config.yaml` `evaluator.timeout=900, max_retries=2` | evaluate() 重試 |
+| L4 | `websocietysimulator/simulator.py` `future.result(timeout=300)` | 單一 task |
+| L5（缺） | `simulation_crew.py` 沒設 `max_rpm` | CrewAI/LiteLLM 內部呼叫 |
+
+**重要**：L1 接線後，data_retriever 不再用 LLM 呼叫工具，每個 task 的 LLM call 從
+~7 次（含 ReAct 多輪）降到 ~3 次——這本身就大幅降低 rate limit 壓力（見驗證數據）。
+
+---
+
+## 11. 實作進度與 PR 對照
+
+| 項目 | 狀態 | PR |
+|------|------|----|
+| Repo 重構（清理/合併測試/路徑對齊/docs legacy/Makefile） | ✅ merged | #1, #4 |
+| data_retriever 進化 + review_by_item + evaluator timeout + 學生文件 | ✅ merged | #2 |
+| Gemini 對話歸檔 | ✅ merged | #6 |
+| **L0** 工具可觀測性 | ✅ merged | #5 |
+| **L1** clamp 直譯器（executor + 22 單元測試） | ✅ merged | #7 |
+| **L1** 接線（executor → pipeline，7 檔案） | ✅ merged | #8 |
+| L2 工具生成（AST 沙箱） | ⬜ 設計完成 | — |
+| Tier C 能力註冊表（RagTool） | ⬜ 設計完成 | — |
+
+```
+Failure Taxonomy 進度：
+✅ L0  可觀測性
+✅ L1  clamp 直譯器
+✅ L1  接線
+⬜ L2  工具生成
+⬜ Tier C  能力註冊表
+```
+
+---
+
+## 12. 驗證數據
+
+### 12.1 L1 元件單元測試
+`tests/test_retrieval_executor.py` — **22 案例全綠**。證明 clamp 契約：
+垃圾 policy（None / 字串 / 非法 query / k=-99 / k=999999 / non-dict）全部 clamp 不 raise；
+各 sampling strategy 排序正確；per-query 失敗隔離。
+
+### 12.2 L1 接線端到端
+- **真實 1-task evaluate**：`combined_score=0.7454`，`tool_use coverage=1.0`
+  （4 次查詢現在來自 executor，由 L0 捕捉）
+- **mock smoke**（`agents_config_path=None` fallback 路徑）：✅ pass，無 KeyError
+- 之前每次都有的 `cannot schedule new futures after shutdown` 警告**消失**
+  （data_retriever 不再走 ReAct 工具呼叫機制）
+
+### 12.3 進化跑歷史對照
+
+| 跑次 | 設定 | baseline | best | 備註 |
+|------|------|:---:|:---:|------|
+| v1 | 10 iter × 1 task, 3 tools | 0.6646 | **0.7901** | 最早成功 |
+| v3 | 50→10 iter × 3 tasks, 4 tools | 0.2826 | 0.6419 | rate limit 嚴重，59× 429，~36% fallback |
+| L1 驗證 | 15 iter × 1 task（接線後） | — | ~0.779 | 14/15 完成後被環境 kill |
+
+### 12.4 L1 對 rate limit / 穩定性的影響（接線前後）
+
+| 指標 | v3（接線前） | L1 接線後 |
+|------|:---:|:---:|
+| 每 task LLM call | ~7（含 ReAct 來回） | ~3 |
+| tool calling 崩潰 | 多次 | **0**（agent 不再呼叫工具） |
+| tool_use coverage | 不穩 | 穩定 **1.0**（executor 確定性） |
+| 429 rate limit | 59 次 | 大幅減少 |
+
+> **注意**：受 Claude Code 背景任務 ~1 小時上限影響，多次完整進化（50 iter）被
+> 中途 kill。要跑完整進化建議在終端機用 `nohup make evolve ITERS=50 TASKS=1 &`。
+
+---
+
+## 13. 待辦與未解問題
+
+- [ ] **L2 工具生成**實作（AST 沙箱 + evolvable_tools + tool_loader 四道關卡）
+- [ ] **Tier C**（RagTool registry + portfolio）實作
+- [ ] **L5 rate limit**：CrewAI 端 `max_rpm` / `litellm_params`（目前裸露）
+- [ ] **方向 #7 Train/Val 切分**：5 task 樣本過擬合風險（同一 YAML 兩次評估 0.66 vs 0.28）
+- [ ] **方向 #6 MAP-Elites 自訂維度**：用 `preference_estimation × review_generation` 看 trade-off 前沿
+- [ ] 完整 50-iter 進化（需在不受 session 上限影響的環境跑）
+- [ ] coverage penalty A/B：`OPENEVOLVE_TOOL_COVERAGE_PENALTY` 是否真的有助於收斂
+
+---
+
+*本文件持續維護。新工作完成後會詢問是否追加記錄。*
