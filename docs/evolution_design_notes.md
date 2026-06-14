@@ -271,6 +271,50 @@ agent 不「評判」docstring，它只是讀了決定用不用；真正的淘�
 **credit assignment 限制**：fitness 是整包一個分數，docstring 搭順風車被選擇——靠 L0
 artifacts（哪些工具沒被呼叫）才能定向改進。
 
+### 7.1 工具裝給誰？—— 裝在「決策點」，不是「資料點」
+
+L2 工具裝給 **`psychological_analyst`**（3 個 agent 數量不變）。背後邏輯：
+
+```
+data_retriever        psychological_analyst       behavior_simulator
+（資料點）              （決策點 ★）                （輸出點）
+取得+整理資料   →     判斷用戶會怎麼反應    →     生成最終結果
+   無工具              ← 工具在這裡最有價值 →         無工具
+```
+
+進階工具（派生計算）的存在意義是「**做更好的判斷**」，所以裝在判斷發生的地方。
+
+**為什麼不是 data_retriever**（這點最關鍵）：
+1. **會把 L1 才剛清掉的崩潰風險請回來** — PR #8 才把 data_retriever 去工具化（改確定性
+   executor）；裝回工具等於把 LLM-主導-工具-呼叫的崩潰風險請回剛清乾淨的位置，自我矛盾。
+2. **職責混淆** — 它現在的單一職責是「萃取已檢索的原始資料」（純文字任務）；加工具會變
+   「萃取者+分析者」職責不清。
+3. **時機太早** — 它是第一棒，還沒有分析脈絡，無從判斷「該不該算進階分析」。
+
+**為什麼是 psychological_analyst**：任務性質匹配（它本來就在分析評分習慣/偏好）、是「自主
+按需呼叫」的最佳位置（臨場判斷這個 case 要不要算 variance/affinity）、失敗安全（不呼叫或
+工具壞了還有 executor 的 retrieved_context 墊底，優雅退化）。**不是 behavior_simulator**：
+它是輸出點，該專心生成 stars+review，分析應在它之前完成。
+
+**L1 ↔ L2 的對稱**：確定性的核心檢索 → executor（非 agent）；需判斷的進階分析 → analyst
+（agent）。data_retriever 卡在中間當「把確定性結果整理成文字」的橋樑，兩邊都不沾工具。
+
+### 7.2 進化架構（兩個選項，Phase 2 拍板）
+
+OpenEvolve 一次 run 只進化一個 initial program 檔案。L2 要進化工具程式碼有兩條路：
+- **選項 A'（傾向）**：獨立進化 `evolvable_tools.py`（Python 模式，OpenEvolve 原生強項，
+  可用 diff 模式、格式乾淨）；代價是工具與 prompt 分開進化（可用交替優化彌補）。
+- **選項 B**：把工具程式碼塞進 YAML 一個 `evolvable_tools_code: |` 欄位（單一目標、可共同
+  進化）；代價是 YAML-in-Python 雙重縮排敏感、易出錯。
+
+### 7.3 實作分期（沿用 L0/L1 節奏）
+
+- **Phase 1（沙箱地基，零風險可測）**：`tool_loader.py`（ReadOnlyKit + 四道關卡）+
+  `evolvable_tools.py`（2-3 個 seed 工具）+ `tests/test_tool_loader.py`（證明四道關卡：
+  惡意碼被擋、壞工具靜默丟棄、好工具通過、混合場景不崩）。**不接進 pipeline**。
+- **Phase 2（接線）**：定 A'/B、給 psychological_analyst 裝 evolved tools、L0 儀表化延伸到
+  evolved tool 呼叫、`n_tools` 加進 MAP-Elites 維度（接 #6）、holdout 驗證工具普遍價值（接 #7）。
+
 ---
 
 ## 8. Tier C — 現成生態工具（RagTool，設計）
