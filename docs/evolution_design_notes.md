@@ -309,11 +309,37 @@ OpenEvolve 一次 run 只進化一個 initial program 檔案。L2 要進化工�
 
 ### 7.3 實作分期（沿用 L0/L1 節奏）
 
-- **Phase 1（沙箱地基，零風險可測）**：`tool_loader.py`（ReadOnlyKit + 四道關卡）+
-  `evolvable_tools.py`（2-3 個 seed 工具）+ `tests/test_tool_loader.py`（證明四道關卡：
-  惡意碼被擋、壞工具靜默丟棄、好工具通過、混合場景不崩）。**不接進 pipeline**。
-- **Phase 2（接線）**：定 A'/B、給 psychological_analyst 裝 evolved tools、L0 儀表化延伸到
+- **Phase 1（沙箱地基，零風險可測）— ✅ 已完成（PR #13）**：`tool_loader.py`（ReadOnlyKit
+  + 四道關卡）+ `evolvable_tools.py`（2 個 seed 工具）+ `tests/test_tool_loader.py`。
+  **未接進 pipeline**。
+- **Phase 2（接線）⬜**：定 A'/B、給 psychological_analyst 裝 evolved tools、L0 儀表化延伸到
   evolved tool 呼叫、`n_tools` 加進 MAP-Elites 維度（接 #6）、holdout 驗證工具普遍價值（接 #7）。
+
+#### 7.3.1 Phase 1 實作摘要（PR #13）
+
+**四道關卡**（`src/tools/tool_loader.py`）：
+
+| Gate | 函式 | 作用 | 失敗處置 |
+|------|------|------|---------|
+| 1 | `ast_safety_scan` | 靜態擋非白名單 import、危險 builtins（open/exec/eval/`__import__`）、dunder 逃逸（`__class__`/`__globals__`） | 整檔拒絕（exec 會跑整個 module） |
+| 2 | `signature_ok` | 只認 `tool_*` 且簽名 `(kit, user_id, item_id)` | 不列為候選 |
+| 3 | `trial_run` | fixture 實跑一次，5s timeout，回傳須非空 str ≤ 4000 字元 | **靜默丟棄**（沉默死基因） |
+| 4 | `_wrap_as_crewai_tool` | 存活者包成 CrewAI `@tool`，docstring → description | — |
+
+**ReadOnlyKit**：資料門面，只暴露 `get_user/get_item/get_reviews`——碰不到檔案系統、網路、
+groundtruth，萬流歸宗到唯讀資料。exec 在受限 namespace（safe builtins + 只放行白名單的
+`__import__`，AST 之上的縱深防禦）。
+
+**安全範圍**：教育級沙箱（AST + 受限 builtins + 唯讀門面），防 LLM **無意中**寫危險碼，
+非對抗惡意攻擊者（生產級需 subprocess/container）。
+
+**驗證數據**：
+- 22 單元測試全綠（惡意碼被擋 / 壞工具丟棄 / 好工具通過 / 混合 1 好 3 壞→只 load 好的不崩 /
+  seed 工具確實可 load）；連同 L1 的 22 測試 = **44 全綠**。
+- seed 工具用真實 `CacheInteractionTool` 能 load，空歷史時優雅回退（robust）。
+
+**實作中抓到的真 bug**：受限 namespace 移除 `__import__` 後，連白名單的 `import statistics`
+都無法執行（import 機制需要 `__import__`）。修正為提供只放行白名單的 `_safe_import`。
 
 ---
 
@@ -384,8 +410,10 @@ grounding 洩漏（排除測試樣本）、reward hacking（避免語意檢索�
 | **L1** 接線（executor → pipeline，7 檔案） | ✅ merged | #8 |
 | 設計文件落地 | ✅ merged | #9 |
 | **#7** Train-Val 切分（holdout 驗證機制） | ✅ merged | #10 |
-| **#6** MAP-Elites 自訂維度（preference × review） | 🔵 PR open | #11 |
-| L2 工具生成（AST 沙箱） | ⬜ 設計完成 | — |
+| **#6** MAP-Elites 自訂維度（preference × review） | ✅ merged | #11 |
+| L2 規劃擴充（工具放置/架構/分期） | ✅ merged | #12 |
+| **L2 Phase 1** 沙箱地基（loader + seed + 22 測試） | ✅ merged | #13 |
+| L2 Phase 2 接線（工具裝給 analyst） | ⬜ 設計完成 | — |
 | Tier C 能力註冊表（RagTool） | ⬜ 設計完成 | — |
 
 ```
@@ -393,7 +421,7 @@ Failure Taxonomy 進度：
 ✅ L0  可觀測性
 ✅ L1  clamp 直譯器
 ✅ L1  接線
-⬜ L2  工具生成
+🔵 L2  工具生成（Phase 1 沙箱地基 ✅；Phase 2 接線 ⬜）
 ⬜ Tier C  能力註冊表
 ```
 
@@ -558,7 +586,8 @@ L2 工具生成         ← 最後。此時已有 holdout 照妖鏡 + n_tools �
 
 ## 14. 待辦與未解問題
 
-- [ ] **L2 工具生成**實作（AST 沙箱 + evolvable_tools + tool_loader 四道關卡）
+- [x] **L2 Phase 1** 沙箱地基（tool_loader 四道關卡 + seed + 22 測試，PR #13，見 §7.3.1）
+- [ ] **L2 Phase 2** 接線（工具裝給 psychological_analyst + 進化架構 A'/B + n_tools 維度）
 - [ ] **Tier C**（RagTool registry + portfolio）實作
 - [ ] **L5 rate limit**：CrewAI 端 `max_rpm` / `litellm_params`（目前裸露）
 - [x] **方向 #7 Train/Val 切分**：已建立 disjoint holdout 機制（見下方「#7 實作摘要」）。後續仍可擴大 train 樣本數降低噪音
