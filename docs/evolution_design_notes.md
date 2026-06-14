@@ -196,6 +196,40 @@ After:   serving_flow → execute_policy(retrieval_policy) → retrieved_context
 > 把「值得進化的部分」（檢索策略 + 萃取 prompt）**留在**進化空間。
 > 進化從此在「最壞只是低分」的安全地形上探索，不再有「改壞 prompt → 崩潰」的懸崖。
 
+### 6.5 工具使用者的轉變（L1 接線前後）
+
+L1 接線最根本的改變是**「誰在使用工具」**。一句話：**接線後，沒有任何 CrewAI
+agent 在使用工具了**——查資料的工作從 agent 手上移到確定性的 executor。
+
+**接線前**
+```
+data_retriever（agent）── 綁 @tool ──> interaction_tool_wrapper ──> InteractionTool
+   LLM 用 ReAct 文字格式「主動」呼叫工具 4 次  ← 使用者是 LLM，會崩潰的那種
+```
+
+**接線後（現在）**
+```
+serving_flow（crew 啟動前）
+   └─ get_injected_tool() 拿到 InteractionTool
+   └─ execute_policy(...) ──直接呼叫──> InteractionTool.get_user/get_item/get_reviews
+   └─ 結果存成 retrieved_context，注入 crew inputs
+data_retriever（agent）── 無工具 ──> 只萃取 {retrieved_context}（純文字任務）
+```
+
+| 角色 | 接線後還用工具？ | 說明 |
+|------|:---:|------|
+| `retrieval_executor` | ✅ **唯一的真正使用者** | crew 啟動前確定性查資料 |
+| `data_retriever`（agent） | ❌ | 變萃取者，只處理已給的文字 |
+| `psychological_analyst` | ❌ | 本來就沒工具 |
+| `behavior_simulator` | ❌ | 本來就沒工具 |
+
+**副產物：`interaction_tool_wrapper`（@tool）成為孤兒**
+唯一綁它的 data_retriever 在接線時拿掉了 `tools=[...]`，所以 `get_interaction_tool()`
+與被 `@tool` 裝飾的 `interaction_tool_wrapper` 已**無人呼叫**。但其所在模組仍存活，
+因為這些函式還有人用：`inject_simulator_tool()`（workflow 注入）、`get_injected_tool()`
+（serving_flow 拿 tool 給 executor）、`_record()` / `drain_tool_log()`（L0 觀測）。
+孤兒部分暫不清除——L2 可能復用其注入機制，待 L2 塵埃落定再評估（見 §14 待辦）。
+
 ---
 
 ## 7. L2 — 讓 OpenEvolve 創造新工具（設計，尚未實作）
@@ -487,6 +521,9 @@ L2 工具生成         ← 最後。此時已有 holdout 照妖鏡 + n_tools �
 - [x] **方向 #6 MAP-Elites 自訂維度**：已用 `preference_estimation × review_generation` 當 feature dims（見 §12.6）。後續可跑進化看 trade-off 前沿
 - [ ] 完整 50-iter 進化（需在不受 session 上限影響的環境跑）
 - [ ] coverage penalty A/B：`OPENEVOLVE_TOOL_COVERAGE_PENALTY` 是否真的有助於收斂
+- [ ] **清理孤兒 @tool**：L1 接線後 `interaction_tool_wrapper`（@tool）與
+  `get_interaction_tool()` 已無人呼叫（見 §6.5）。**待 L2 完成後評估是否移除**——
+  L2 可能復用其注入機制，故暫留。
 
 ---
 
