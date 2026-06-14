@@ -69,11 +69,15 @@ def _get_simulator() -> Simulator:
     global _simulator
     if _simulator is None:
         logging.getLogger().setLevel(logging.WARNING)
-        print("[Evaluator] Initializing Simulator with sampled dataset (one-time)...")
+        # Train/holdout split: evolution uses dummy_tasks (train); holdout
+        # validation overrides these env vars to point at holdout_tasks.
+        task_dir = os.environ.get("OPENEVOLVE_TASK_DIR", "dummy_tasks")
+        gt_dir = os.environ.get("OPENEVOLVE_GT_DIR", "dummy_groundtruth")
+        print(f"[Evaluator] Initializing Simulator (task_dir={task_dir}, one-time)...")
         _simulator = Simulator(data_dir="dummy_dataset", device="cpu", cache=True)
         _simulator.set_task_and_groundtruth(
-            task_dir="dummy_tasks",
-            groundtruth_dir="dummy_groundtruth"
+            task_dir=task_dir,
+            groundtruth_dir=gt_dir,
         )
         _simulator.set_agent(CrewAISimulationAgent)
         print("[Evaluator] Simulator ready.")

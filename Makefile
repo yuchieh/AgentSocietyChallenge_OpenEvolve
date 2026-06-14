@@ -64,6 +64,10 @@ evolve-resume:  ## 從最新 checkpoint 繼續（指定 CHECKPOINT=path）
 evolve-test:  ## 本地整合測試 evaluator（不啟動進化）
 	uv run --env-file .env python openevolve_evaluator.py
 
+.PHONY: validate-holdout
+validate-holdout:  ## 用 holdout 集驗證一份 agents YAML（偵測過擬合，可帶 YAML=path）
+	uv run --env-file .env python scripts/validate_holdout.py $(YAML)
+
 .PHONY: visualize
 visualize:  ## 啟動 OpenEvolve 視覺化伺服器（http://127.0.0.1:8080）
 	uv run python /Users/jack.ho/WorkSpace/openevolve/scripts/visualizer.py \
@@ -73,7 +77,7 @@ visualize:  ## 啟動 OpenEvolve 視覺化伺服器（http://127.0.0.1:8080）
 # 資料處理
 # ============================================================================
 .PHONY: sample-dataset
-sample-dataset:  ## 從 data/test_review_subset.json 取樣評估資料集
+sample-dataset:  ## 從 dummy_dataset/test_review_subset.json 取樣評估資料集
 	uv run python src/utils/create_sampled_dataset.py --n 5
 
 # ============================================================================
