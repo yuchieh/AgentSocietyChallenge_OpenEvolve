@@ -158,15 +158,36 @@ def _wrap_as_crewai_tool(name: str, fn: Callable, kit: ReadOnlyKit,
     """Gate 4: wrap a validated tool fn as a CrewAI tool; docstring -> description."""
     from crewai.tools import tool
 
-    @tool(name)
+    # CrewAI's @tool requires the wrapped function to HAVE a docstring at
+    # decoration time, so transfer the evolved tool's docstring onto the
+    # wrapper before applying @tool (a guaranteed non-empty fallback to name).
+    doc = (fn.__doc__ or f"Derived analysis tool {name}.").strip() or f"Tool {name}."
+
     def _wrapped(user_id: str, item_id: str) -> str:
         try:
-            return str(fn(kit, user_id, item_id))[:max_chars]
+            out = str(fn(kit, user_id, item_id))[:max_chars]
+            _record_l0(name, True)
+            return out
         except Exception as e:  # noqa: BLE001 — runtime safety net
+            _record_l0(name, False)
             return f"(tool {name} error: {e})"
 
-    _wrapped.description = (fn.__doc__ or name).strip()
-    return _wrapped
+    _wrapped.__name__ = name
+    _wrapped.__doc__ = doc
+    return tool(name)(_wrapped)
+
+
+def _record_l0(name: str, ok: bool) -> None:
+    """L0 observability extension: log evolved-tool calls into the same tool-call
+    log. The tool name is recorded (not an essential query), so it shows up in
+    artifacts (ok_by_type) — giving the docstring-co-evolution signal "which
+    evolved tools did the agent actually call" — without affecting
+    essential_coverage. Soft dependency; never break tool execution."""
+    try:
+        from src.tools.interaction_tool_wrapper import _record
+        _record(name, ok)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def load_evolved_tools(source: str, interaction_tool: Any,

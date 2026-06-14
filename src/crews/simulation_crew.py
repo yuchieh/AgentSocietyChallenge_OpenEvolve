@@ -2,6 +2,34 @@ import os
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from src.tools.interaction_tool_wrapper import get_injected_tool
+from src.tools.tool_loader import load_evolved_tools
+
+# L2: path to the (possibly evolved) derived-tool module
+_EVOLVABLE_TOOLS_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "evolvable_tools.py"
+)
+
+
+def _load_analyst_tools():
+    """L2: safely load evolution-generated derived tools for the analyst.
+    Any failure degrades gracefully to an empty list — the analyst can still
+    reason from {retrieved_context} without these extra tools."""
+    it = get_injected_tool()
+    if it is None or not os.path.exists(_EVOLVABLE_TOOLS_PATH):
+        return []
+    try:
+        with open(_EVOLVABLE_TOOLS_PATH, encoding="utf-8") as f:
+            src = f.read()
+        tools, report = load_evolved_tools(src, it)
+        print(f"[L2] loaded evolved tools: {report.get('loaded', [])}; "
+              f"dropped: {report.get('dropped', [])}")
+        return tools
+    except Exception as e:  # noqa: BLE001 — never let tool loading break the crew
+        print(f"[L2] tool loading failed, continuing without: {e}")
+        return []
+
+
 @CrewBase
 class SimulationCrew():
     """Simulation Crew for generating user review simulation"""
@@ -23,9 +51,14 @@ class SimulationCrew():
 
     @agent
     def psychological_analyst(self) -> Agent:
+        # L2: this agent (the "decision point") gets the evolved derived-analysis
+        # tools and decides autonomously whether to call them. Tools that fail
+        # the sandbox are already dropped; if none load, the agent still works
+        # from {retrieved_context}, so this never crashes the pipeline.
         return Agent(
             config=self.agents_config['psychological_analyst'],
-            verbose=False
+            verbose=False,
+            tools=_load_analyst_tools(),
         )
 
     @agent

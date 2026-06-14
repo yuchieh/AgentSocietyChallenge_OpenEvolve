@@ -312,8 +312,9 @@ OpenEvolve 一次 run 只進化一個 initial program 檔案。L2 要進化工�
 - **Phase 1（沙箱地基，零風險可測）— ✅ 已完成（PR #13）**：`tool_loader.py`（ReadOnlyKit
   + 四道關卡）+ `evolvable_tools.py`（2 個 seed 工具）+ `tests/test_tool_loader.py`。
   **未接進 pipeline**。
-- **Phase 2（接線）⬜**：定 A'/B、給 psychological_analyst 裝 evolved tools、L0 儀表化延伸到
-  evolved tool 呼叫、`n_tools` 加進 MAP-Elites 維度（接 #6）、holdout 驗證工具普遍價值（接 #7）。
+- **Phase 2（接線）— ✅ 已完成（PR #15）**：給 psychological_analyst 裝 evolved tools
+  （採 A' 架構：固定路徑 `evolvable_tools.py`，agent 直接 load）、L0 儀表化延伸到 evolved
+  tool 呼叫。（`n_tools` MAP-Elites 維度與 holdout 工具驗證留待真正啟動工具進化 run 時。）
 
 #### 7.3.1 Phase 1 實作摘要（PR #13）
 
@@ -340,6 +341,33 @@ groundtruth，萬流歸宗到唯讀資料。exec 在受限 namespace（safe buil
 
 **實作中抓到的真 bug**：受限 namespace 移除 `__import__` 後，連白名單的 `import statistics`
 都無法執行（import 機制需要 `__import__`）。修正為提供只放行白名單的 `_safe_import`。
+
+#### 7.3.2 Phase 2 實作摘要（PR #15）
+
+**接線**（採進化架構 **A'**：`evolvable_tools.py` 是固定路徑檔案，agent 直接 load——
+接線最乾淨、且為 OpenEvolve 原生的 Python 檔進化鋪路）：
+- `src/crews/simulation_crew.py`：`psychological_analyst` 在建立時呼叫 `_load_analyst_tools()`
+  → `get_injected_tool()` 拿 live tool → `load_evolved_tools(evolvable_tools.py)` 裝上。
+  任何失敗 graceful 退回空清單（agent 仍可用 `{retrieved_context}` 分析，不崩）。
+- `config/tasks.yaml`：`analyze_preference_task` 提示「你 MAY 有可選分析工具，需要時才用」。
+- `src/tools/tool_loader.py`：`_wrap_as_crewai_tool` 在工具被呼叫時 `_record(name, ok)`，
+  把 evolved tool 呼叫記進 L0 log（出現在 artifacts 的 `ok_by_type`，但因 name 不在
+  essential set，不影響 `essential_coverage`）——這就是 docstring 共同進化要的「哪些工具
+  真的被 agent 呼叫」訊號。
+
+**抓到的真 bug（為何「分數健康 ≠ 功能正確」）**：第一次接線後 1-task evaluate 拿到
+`combined_score=0.8452`（看似很好），但**直接驗證 `agent.tools` 才發現是 `[]`**——
+CrewAI 的 `@tool` 要求被裝飾函式在裝飾當下就有 docstring，而 wrapper 的 `_wrapped` 沒有，
+於是裝載拋錯、graceful 退回空清單。修正：把 fn 的 docstring 轉移到 `_wrapped.__doc__`
+後才手動套用 `tool(name)(_wrapped)`。**教訓：驗證要查功能本身（tools 清單），不能只看
+分數——graceful fallback 會讓「沒裝上工具」偽裝成「分數正常」。**
+
+**驗證數據**：
+- 46 單元測試全綠（新增 2 個 `wrap=True` 回歸測試，正是覆蓋上面那個 bug——
+  之前測試全用 `wrap=False` 所以沒抓到）。
+- 直接驗證：inject 後建 crew，`analyst.tools == ['tool_rating_variance', 'tool_category_affinity']` ✅
+- mock smoke：`[L2] loaded evolved tools: [...]` + 整合測試完成 ✅
+- 真實 1-task：`combined_score=0.8452`；agent 自主選擇不呼叫工具也運作良好（工具是錦上添花）
 
 ---
 
@@ -413,7 +441,7 @@ grounding 洩漏（排除測試樣本）、reward hacking（避免語意檢索�
 | **#6** MAP-Elites 自訂維度（preference × review） | ✅ merged | #11 |
 | L2 規劃擴充（工具放置/架構/分期） | ✅ merged | #12 |
 | **L2 Phase 1** 沙箱地基（loader + seed + 22 測試） | ✅ merged | #13 |
-| L2 Phase 2 接線（工具裝給 analyst） | ⬜ 設計完成 | — |
+| **L2 Phase 2** 接線（工具裝給 analyst，A' 架構） | ✅ merged | #15 |
 | Tier C 能力註冊表（RagTool） | ⬜ 設計完成 | — |
 
 ```
@@ -421,7 +449,7 @@ Failure Taxonomy 進度：
 ✅ L0  可觀測性
 ✅ L1  clamp 直譯器
 ✅ L1  接線
-🔵 L2  工具生成（Phase 1 沙箱地基 ✅；Phase 2 接線 ⬜）
+✅ L2  工具生成（Phase 1 沙箱地基 ✅；Phase 2 接線 ✅）
 ⬜ Tier C  能力註冊表
 ```
 
@@ -587,7 +615,9 @@ L2 工具生成         ← 最後。此時已有 holdout 照妖鏡 + n_tools �
 ## 14. 待辦與未解問題
 
 - [x] **L2 Phase 1** 沙箱地基（tool_loader 四道關卡 + seed + 22 測試，PR #13，見 §7.3.1）
-- [ ] **L2 Phase 2** 接線（工具裝給 psychological_analyst + 進化架構 A'/B + n_tools 維度）
+- [x] **L2 Phase 2** 接線（工具裝給 psychological_analyst，採 A' 架構，PR #15，見 §7.3.2）
+- [ ] **啟動工具進化 run**：以 `evolvable_tools.py` 為 initial program 跑 OpenEvolve（A'），
+  並加 `n_tools` MAP-Elites 維度 + 用 holdout 驗證進化工具的普遍價值
 - [ ] **Tier C**（RagTool registry + portfolio）實作
 - [ ] **L5 rate limit**：CrewAI 端 `max_rpm` / `litellm_params`（目前裸露）
 - [x] **方向 #7 Train/Val 切分**：已建立 disjoint holdout 機制（見下方「#7 實作摘要」）。後續仍可擴大 train 樣本數降低噪音

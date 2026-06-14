@@ -29,6 +29,10 @@ analyze_preference_task:
     2. The user's rating DISTRIBUTION - do they mostly give 1-2 stars, 3 stars, or 4-5 stars?
     3. Whether this item's category/features align with things the user has rated highly or poorly before.
     4. Do NOT assume the user will like the item. Many users are critical and give low ratings.
+
+    You MAY have optional analysis tools available (e.g. rating variance, category
+    affinity). Use them only when they help sharpen your judgement; if none are
+    available or they return little, just reason from the retrieved data above.
   expected_output: >
     A psychological analysis report that includes the user's average rating tendency, likely satisfaction level with this specific item, and a preliminary rating estimate with justification.
   agent: psychological_analyst
