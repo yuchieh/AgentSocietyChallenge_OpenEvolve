@@ -275,6 +275,25 @@ s.addText("安全憲法", { x: 0.95, y: 5.7, w: 11, h: 0.4, fontFace: BF, fontSi
 s.addText("我越是放手讓它自主，越要先建好「最壞 = 優雅退化，絕不是災難性崩潰」的護欄。", { x: 0.95, y: 6.1, w: 11.5, h: 0.6, fontFace: HF, fontSize: 18, bold: true, color: AMBER, margin: 0 });
 codeRef(s, "護欄落地：retrieval_executor.py:53 normalize_policy（clamp）· tool_loader.py:77-177（AST→沙箱→包裝）");
 
+// ============================================================ S7b 協作的起點：先對齊 context
+s = p.addSlide();
+header(s, "Part 1 · 協作架構", "協作的起點：先對齊 context");
+s.addText("動手之前，我（Human）負責讓三方站在同一個 context 上——這是一切協作的地基。", { x: 0.6, y: 1.62, w: 12.15, h: 0.4, fontFace: BF, fontSize: 13.5, color: BLUE, margin: 0 });
+const ctx = [
+  ["先理解，再動手", "「請詳細閱讀並總結這個 Repo」「目前的 block 設置正確嗎」——先講出理解、我確認後才前進", 0.6, 2.1],
+  ["喚回關鍵歷史", "「怎麼讓 agent 安全進化、不在 tool calling 上崩潰？」——把先前那次崩潰的教訓帶進當下", 6.8, 2.1],
+  ["動手前先對齊狀態", "「現在 push 會到哪？」「為什麼這次沒先開 branch？」——不在模糊的前提下執行", 0.6, 4.1],
+  ["寫進活文件，日後可重建", "evolution_design_notes 活文件 +「參考我們先前的 design notes」——任何中斷都能用記錄接回", 6.8, 4.1],
+];
+ctx.forEach((c) => {
+  card(s, c[2], c[3], 5.95, 1.85);
+  s.addShape(p.shapes.RECTANGLE, { x: c[2], y: c[3], w: 0.12, h: 1.85, fill: { color: HUMAN } });
+  s.addText(c[0], { x: c[2] + 0.35, y: c[3] + 0.2, w: 5.4, h: 0.45, fontFace: HF, fontSize: 16, bold: true, color: HUMAN, margin: 0 });
+  s.addText(c[1], { x: c[2] + 0.35, y: c[3] + 0.72, w: 5.45, h: 1.0, fontFace: BF, fontSize: 13, color: INK, lineSpacing: 19, margin: 0 });
+});
+card(s, 0.6, 6.2, 12.15, 0.82, NAVY);
+s.addText("我扮演 context 的「負責人」：開場對齊、喚回歷史、隨時確認、沉澱成文件——所以任何中斷，都能用記錄重新接上。", { x: 0.95, y: 6.2, w: 11.5, h: 0.82, fontFace: HF, fontSize: 15, bold: true, color: AMBER, valign: "middle", margin: 0 });
+
 // ============================================================ S8 舞台
 s = p.addSlide();
 header(s, "Part 2 · 問題", "舞台：競賽任務 + CrewAI + OpenEvolve");
