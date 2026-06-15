@@ -59,7 +59,7 @@ s = p.addSlide();
 header(s, "開場", "我們做出了什麼？");
 const stats = [
   ["baseline", "0.28 → 0.72", "executor 確定性檢索的穩定性紅利", HUMAN],
-  ["best", "0.842", "iter22：進化自己長出的量化公式", CLAUDE],
+  ["best", "0.842", "iter22（進化到第 22 代）長出的量化公式", CLAUDE],
   ["工具崩潰", "36% → 0", "從會把自己改崩，到零工具呼叫崩潰", OE],
 ];
 stats.forEach((t, i) => {
@@ -219,7 +219,7 @@ codeRef(s, "evaluator.py:96 evaluate · :106-108 fitness ｜ simulation_crew.py:
 // ============================================================ S9 事故現場
 s = p.addSlide();
 header(s, "Part 2 · 問題", "事故現場：進化把自己改崩了");
-s.addText("v3 進化中，agent prompt 的突變導致 tool 呼叫失效 → 整條 pipeline 崩潰", { x: 0.6, y: 1.9, w: 12, h: 0.4, fontFace: BF, fontSize: 16, color: INK, margin: 0 });
+s.addText("在先前一次「沒有防護」的進化實驗裡，agent prompt 的突變導致工具呼叫失效 → 整條流程崩潰", { x: 0.6, y: 1.9, w: 12.15, h: 0.4, fontFace: BF, fontSize: 15.5, color: INK, margin: 0 });
 s.addChart(p.charts.LINE, [
   { name: "combined_score", labels: ["it0", "it1", "it2", "it3", "it4", "it5", "it6", "it7", "it8", "it9", "it10"],
     values: [0.28, 0.28, 0.65, 0.55, 0.60, 0.35, 0.71, 0.35, 0.35, 0.79, 0.35] },
@@ -231,13 +231,13 @@ s.addChart(p.charts.LINE, [
 });
 card(s, 8.9, 2.6, 3.85, 3.9, NAVY);
 s.addText("0.35", { x: 9.1, y: 2.9, w: 3.4, h: 0.9, fontFace: HF, fontSize: 52, bold: true, color: AMBER, margin: 0 });
-s.addText("fallback 分數", { x: 9.15, y: 3.85, w: 3.4, h: 0.4, fontFace: BF, fontSize: 13, color: ICE, margin: 0 });
-s.addText("v3 約 36% iteration 反覆掉到這地板——工具呼叫一壞，預測流程整個垮掉。", { x: 9.15, y: 4.35, w: 3.45, h: 1.9, fontFace: BF, fontSize: 13.5, color: WHITE, valign: "top", margin: 0 });
+s.addText("保底分數（fallback）", { x: 9.15, y: 3.85, w: 3.4, h: 0.4, fontFace: BF, fontSize: 13, color: ICE, margin: 0 });
+s.addText("那次約 36% 的迭代反覆掉到這地板——工具呼叫一壞，預測流程整個垮掉。", { x: 9.15, y: 4.35, w: 3.45, h: 1.9, fontFace: BF, fontSize: 13.5, color: WHITE, valign: "top", margin: 0 });
 codeRef(s, "openevolve_evaluator.py:133-137 timeout fallback · :179-184 exception fallback（都回 _result(0.0)）");
 
 // ============================================================ S10 接縫：好問題 → 失敗分類學
 s = p.addSlide();
-header(s, "Part 2 · 接縫", "協作模式 ①：好問題 → 失敗分類學");
+header(s, "Part 2 · 接縫", "協作模式 ①：Claude 的「失敗分類學」");
 card(s, 0.6, 1.9, 4.5, 4.55, "EAF0FA");
 s.addText("我問的好問題", { x: 0.85, y: 2.1, w: 4.0, h: 0.4, fontFace: HF, fontSize: 15, bold: true, color: HUMAN, margin: 0 });
 s.addText("「怎麼讓 agent 安全進化、用不同工具、甚至創造新工具，而不在 tool calling 上崩潰？」", { x: 0.85, y: 2.6, w: 4.0, h: 2.4, fontFace: HF, fontSize: 17, italic: true, color: NAVY, lineSpacing: 28, margin: 0 });
@@ -257,7 +257,7 @@ tax.forEach((t, i) => {
   s.addText(t[1], { x: 6.35, y, w: 2.4, h: 0.66, fontFace: HF, fontSize: 14, bold: true, color: NAVY, valign: "middle", margin: 0 });
   s.addText(t[2], { x: 8.8, y, w: 3.8, h: 0.66, fontFace: BF, fontSize: 12.5, color: INK, valign: "middle", margin: 0 });
 });
-s.addText("Claude 的答：不直接 try/except，先做「失敗分類學」5 層 → 金句：fitness 只告訴你「壞了」，不告訴你「哪裡壞了」。", { x: 5.3, y: 5.95, w: 7.45, h: 0.7, fontFace: BF, fontSize: 12, italic: true, color: BLUE, margin: 0 });
+s.addText("Claude 沒直接 try/except，而是先把「工具呼叫會怎麼壞」拆成 5 層——這套分法就叫「失敗分類學」。金句：fitness 只告訴你「壞了」，不告訴你「哪裡壞了」。", { x: 5.3, y: 5.9, w: 7.45, h: 0.75, fontFace: BF, fontSize: 11.5, italic: true, color: BLUE, lineSpacing: 16, margin: 0 });
 codeRef(s, "5 層分類學 docs/evolution_design_notes.md §3 ｜ 落地 src/tools/{interaction_tool_wrapper,retrieval_executor,tool_loader}.py");
 
 // ============================================================ S11 協議/策略分離
@@ -265,13 +265,21 @@ s = p.addSlide();
 header(s, "Part 3 · 解法", "設計原則：協議 / 策略分離");
 card(s, 0.6, 2.0, 12.15, 1.9, WHITE);
 s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 2.0, w: 0.12, h: 1.9, fill: { color: NAVY } });
-s.addText("協議層（Protocol）— 凍結、機器驗證、程式碼強制", { x: 0.95, y: 2.2, w: 11.6, h: 0.5, fontFace: HF, fontSize: 18, bold: true, color: NAVY, margin: 0 });
-s.addText("「工具怎麼被呼叫」：函式簽名、參數 schema、ReAct 格式、回傳格式、註冊機制", { x: 0.95, y: 2.85, w: 11.6, h: 0.9, fontFace: BF, fontSize: 14.5, color: INK, margin: 0 });
+s.addText("協議層（Protocol）— 凍結、不准進化亂改", { x: 0.95, y: 2.18, w: 11.6, h: 0.5, fontFace: HF, fontSize: 18, bold: true, color: NAVY, margin: 0 });
+s.addText("「工具怎麼被呼叫」：函式簽名、參數格式、回傳格式、註冊機制", { x: 0.95, y: 2.72, w: 11.6, h: 0.5, fontFace: BF, fontSize: 14, color: INK, margin: 0 });
+s.addText([
+  { text: "例：", options: { bold: true, color: NAVY } },
+  { text: "「只能查 user / item / review 這幾種資料」——固定不變，誰都不能改。", options: { color: INK } },
+], { x: 0.95, y: 3.25, w: 11.6, h: 0.5, fontFace: BF, fontSize: 14, italic: true, margin: 0 });
 card(s, 0.6, 4.1, 12.15, 1.9, WHITE);
 s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 4.1, w: 0.12, h: 1.9, fill: { color: AMBER } });
-s.addText("策略層（Policy）— 自由進化", { x: 0.95, y: 4.3, w: 11.6, h: 0.5, fontFace: HF, fontSize: 18, bold: true, color: AMBER, margin: 0 });
-s.addText("「工具被怎麼使用」：查什麼、查多少、何時查、怎麼消化結果、甚至「需要什麼新工具」", { x: 0.95, y: 4.95, w: 11.6, h: 0.9, fontFace: BF, fontSize: 14.5, color: INK, margin: 0 });
-s.addText("所有 L0/L1/L2 防護都建立在這條原則上。", { x: 0.6, y: 6.3, w: 12, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: BLUE, margin: 0 });
+s.addText("策略層（Policy）— 自由進化", { x: 0.95, y: 4.28, w: 11.6, h: 0.5, fontFace: HF, fontSize: 18, bold: true, color: AMBER, margin: 0 });
+s.addText("「工具被怎麼使用」：查哪幾種、查幾筆、何時查、怎麼消化、甚至需要什麼新工具", { x: 0.95, y: 4.82, w: 11.6, h: 0.5, fontFace: BF, fontSize: 14, color: INK, margin: 0 });
+s.addText([
+  { text: "例：", options: { bold: true, color: "B5791F" } },
+  { text: "「這一輪查 user + review、各取 15 筆、按最近排序」——放手讓進化去試。", options: { color: INK } },
+], { x: 0.95, y: 5.35, w: 11.6, h: 0.5, fontFace: BF, fontSize: 14, italic: true, margin: 0 });
+s.addText("好比插座：插座規格是「協議」（固定），要插什麼電器是「策略」（自由）——形狀統一，用法無限。", { x: 0.6, y: 6.25, w: 12.15, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: BLUE, margin: 0 });
 codeRef(s, "協議 retrieval_executor.py:28-30 ALLOWED_QUERIES/STRATEGIES（凍結）｜ 策略 agents_evolving.yaml:11-16 retrieval_policy");
 
 // ============================================================ S12 三層總覽 + L0
@@ -371,7 +379,7 @@ codeRef(s, "tool_loader.py:77/:106/:120/:156 四關卡 · :60 ReadOnlyKit · :16
 
 // ============================================================ S16 #7 train/val
 s = p.addSlide();
-header(s, "Part 4 · 可信機制", "#7 Train / Val 切分：過擬合照妖鏡");
+header(s, "Part 4 · 可信機制", "Train / Val 切分：過擬合照妖鏡");
 s.addText("進化會「背答案」——對那幾個 train task 特化但不泛化。disjoint holdout 揪出它。", { x: 0.6, y: 1.95, w: 12, h: 0.4, fontFace: BF, fontSize: 15, color: INK, margin: 0 });
 card(s, 0.6, 2.7, 5.95, 3.4, "F7E9E7");
 s.addText("過擬合（假冠軍）", { x: 0.9, y: 2.95, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: RED, margin: 0 });
@@ -392,7 +400,7 @@ codeRef(s, "evaluator.py:83-84 OPENEVOLVE_TASK_DIR · scripts/validate_holdout.p
 
 // ============================================================ S17 #6 MAP-Elites
 s = p.addSlide();
-header(s, "Part 4 · 可信機制", "#6 MAP-Elites 自訂維度");
+header(s, "Part 4 · 可信機制", "MAP-Elites 自訂維度");
 s.addText("單一 combined_score 會把兩種極端高手壓成中間值而淘汰。改用兩個分項當 diversity 維度。", { x: 0.6, y: 1.95, w: 12, h: 0.4, fontFace: BF, fontSize: 15, color: INK, margin: 0 });
 s.addChart(p.charts.SCATTER, [
   { name: "X", values: [0.3, 0.8, 0.5, 0.9, 0.4, 0.7, 0.6] },
@@ -465,7 +473,7 @@ s = p.addSlide();
 header(s, "Part 5 · 協作模式", "協作模式 ⑤：分層委派自主（最核心）");
 s.addText("我請 Claude 為 OpenEvolve 搭安全框架（L0/L1/L2）——框架到位，我才敢放手。回扣安全憲法。", { x: 0.6, y: 2.0, w: 12, h: 0.6, fontFace: BF, fontSize: 16, color: INK, margin: 0 });
 card(s, 0.6, 2.9, 5.95, 2.9, "F7E9E7");
-s.addText("沒框架（v3）", { x: 0.9, y: 3.15, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: RED, margin: 0 });
+s.addText("沒防護的先前實驗", { x: 0.9, y: 3.15, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: RED, margin: 0 });
 s.addText([{ text: "36%", options: { fontFace: HF, fontSize: 52, bold: true, color: RED, breakLine: true } }, { text: "iteration 崩潰", options: { color: INK } }], { x: 0.9, y: 3.7, w: 5.4, h: 1.8, lineSpacing: 36, margin: 0 });
 card(s, 6.8, 2.9, 5.95, 2.9, "E7F2EC");
 s.addText("完整架構", { x: 7.1, y: 3.15, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: GREEN, margin: 0 });
@@ -524,7 +532,7 @@ s.addText("我請 Claude 追了 iter22 的所有衍生子代——結論：之�
 const aft = [
   ["over-engineering", "4 段公式 → 5、6 段，加更多參數"],
   ["分項此消彼長", "preference 微幅波動，review_generation 反而退化 → 分數停滯"],
-  ["三島趨同", "migration 把 iter22 基因散到 3 島 → 多樣性塌掉，整族卡同一山頭"],
+  ["三島趨同", "OpenEvolve 把族群分成 3 個獨立演化的「島」；遷移又把 iter22 基因散到三島 → 多樣性塌掉"],
 ];
 aft.forEach((a, i) => {
   const y = 2.6 + i * 1.0;
