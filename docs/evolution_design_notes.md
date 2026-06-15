@@ -476,6 +476,7 @@ Failure Taxonomy 進度：
 | v1 | 10 iter × 1 task, 3 tools | 0.6646 | **0.7901** | 最早成功 |
 | v3 | 50→10 iter × 3 tasks, 4 tools | 0.2826 | 0.6419 | rate limit 嚴重，59× 429，~36% fallback |
 | L1 驗證 | 15 iter × 1 task（接線後） | — | ~0.779 | 14/15 完成後被環境 kill |
+| **完整架構** | **50 iter × 1 task（L0+L1+L2+#6）** | **0.7152** | **0.8419** | **首次完整跑完**（caffeinate + 接電源，~3h17m，見 §12.7） |
 
 ### 12.4 L1 對 rate limit / 穩定性的影響（接線前後）
 
@@ -555,6 +556,45 @@ make validate-holdout
 **觀測建議**：跑進化後用 visualizer 看 MAP-Elites 網格，即可直接觀察「評分準度 vs
 文字擬真度」的 trade-off 前沿——這也是很好的教學展示。
 
+### 12.7 完整架構端到端驗證（L0 + L1 + L2 + #6 + #7）
+
+整套 Failure Taxonomy 第一次以**完整形態**運作的數據。
+
+**(a) 5-iter 首次端到端 + holdout**（TASKS=1，~23 分鐘，全程零崩潰）
+
+| iter | combined | pref | review | evolved tool 呼叫 |
+|------|:---:|:---:|:---:|------|
+| 0 (baseline) | 0.7837 | 0.70 | 0.87 | rating_variance + category_affinity |
+| 2 (best) | **0.8312** | 0.80 | 0.86 | rating_variance |
+| 4 | 0.8308 | 0.80 | 0.86 | 兩個都呼叫 |
+
+- **L2 工具確實被 analyst 自主呼叫**：L0 log 的 `ok_by_type` 出現 `tool_rating_variance` /
+  `tool_category_affinity`（有些 iter 用 2 個、有些 1 個、有些 0 個——正是「自主、錦上添花」的預期）。
+- **holdout 驗證**（best iter2，train 0.8312）：**HOLDOUT = 0.7495**，差距 0.08 →
+  落在「可信」端（非嚴重過擬合）。但這是 1 train vs 1 holdout 的單點比較，統計噪音大，
+  只能說「初步訊號正向 + 機制完整運作」，非「已證實泛化」。
+
+**(b) 完整 50-iter（TASKS=1，2026-06-14 23:51 → 06-15 03:08，~3h17m）**
+
+- **首次完整跑完不中斷** — 用 `nohup` 脫離 harness（避開 Claude Code 背景任務 ~1h 上限）
+  + `caffeinate -i -s` + 接電源 + 蓋子開著（caffeinate 擋不住闔蓋睡眠）。
+- baseline (iter0) **0.7152** → best (iter22) **0.8419**（pref 0.80, rev 0.884）
+- 50 個程式：mean 0.671 / max 0.842 / 低分(<0.35) **8/50 = 16%**
+- simulation timeout **0**；429 出現 9 次但被 retry 吸收，未致命。
+
+**對比：完整架構 vs 早期 v3（接線前）**
+
+| | v3（接線前） | 完整架構 50-iter |
+|---|:---:|:---:|
+| baseline | 0.28 | **0.72** |
+| best | 0.64 | **0.842** |
+| 崩潰率(<0.35) | ~36% | **16%** |
+| tool calling 崩潰 | 多次 | 0 |
+
+→ 完整架構把 baseline 從 0.28 拉到 0.72（executor 確定性檢索的穩定性紅利）、崩潰率
+腰斬（剩餘 16% 主要是偶發 429 + LLM 偶爾輸出無法解析的 JSON），best 達到全 session 最高 0.842。
+這驗證了最初目標：**讓 agent 能安全進化、使用工具，而不在工具呼叫上崩潰。**
+
 ---
 
 ## 13. 後續工作的相互關係（L2 / #6 / #7）
@@ -622,7 +662,7 @@ L2 工具生成         ← 最後。此時已有 holdout 照妖鏡 + n_tools �
 - [ ] **L5 rate limit**：CrewAI 端 `max_rpm` / `litellm_params`（目前裸露）
 - [x] **方向 #7 Train/Val 切分**：已建立 disjoint holdout 機制（見下方「#7 實作摘要」）。後續仍可擴大 train 樣本數降低噪音
 - [x] **方向 #6 MAP-Elites 自訂維度**：已用 `preference_estimation × review_generation` 當 feature dims（見 §12.6）。後續可跑進化看 trade-off 前沿
-- [ ] 完整 50-iter 進化（需在不受 session 上限影響的環境跑）
+- [x] 完整 50-iter 進化：以 `nohup` 脫離 harness + `caffeinate` 防睡眠完成（見 §12.7）。baseline 0.72 → best 0.842，崩潰率 16%（v3 為 36%）
 - [ ] coverage penalty A/B：`OPENEVOLVE_TOOL_COVERAGE_PENALTY` 是否真的有助於收斂
 - [ ] **清理孤兒 @tool**：L1 接線後 `interaction_tool_wrapper`（@tool）與
   `get_interaction_tool()` 已無人呼叫（見 §6.5）。**待 L2 完成後評估是否移除**——
