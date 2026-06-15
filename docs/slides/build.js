@@ -30,6 +30,14 @@ function chip(s, x, y, txt, fill, tcolor) {
   s.addText(txt, { x, y, w: 0.5, h: 0.5, align: "center", valign: "middle", fontFace: HF, fontSize: 18, bold: true, color: tcolor || WHITE, margin: 0 });
 }
 
+// 程式對照頁尾：把每一頁連到真實實作（節錄或 檔名:行號）
+function codeRef(s, txt, dark) {
+  s.addText([
+    { text: "‹code›  ", options: { fontFace: CF, color: AMBER, bold: true } },
+    { text: txt, options: { fontFace: CF, color: dark ? "8FA3C8" : MUTE } },
+  ], { x: 0.55, y: 7.2, w: 12.4, h: 0.22, fontSize: 9, valign: "middle", margin: 0 });
+}
+
 // ============================================================ 1 TITLE
 let s = p.addSlide();
 s.background = { color: NAVY };
@@ -38,6 +46,7 @@ s.addText("OPENEVOLVE × CREWAI", { x: 1, y: 1.9, w: 11, h: 0.4, fontFace: BF, f
 s.addText("用 OpenEvolve 進化\nLLM Agent Crew", { x: 0.95, y: 2.3, w: 11.5, h: 2, fontFace: HF, fontSize: 46, bold: true, color: WHITE, lineSpacing: 50, margin: 0 });
 s.addText("從「會崩潰的 Tool Calling」到「安全可進化的多代理系統」", { x: 1, y: 4.5, w: 11, h: 0.5, fontFace: BF, fontSize: 19, color: ICE, margin: 0 });
 s.addText("AgentSociety Challenge · Tool Calling Failure Taxonomy", { x: 1, y: 6.4, w: 11, h: 0.4, fontFace: BF, fontSize: 13, color: "8FA3C8", margin: 0 });
+codeRef(s, "進入點：config/openevolve_config.yaml · openevolve_evaluator.py · config/agents_evolving.yaml", true);
 
 // ============================================================ 2 AGENDA + OBJECTIVES
 s = p.addSlide();
@@ -61,6 +70,7 @@ s.addText([
   { text: "學習目標   ", options: { bold: true, color: AMBER } },
   { text: "進化式優化如何套用在 agent 設計 · 5 層失效與防護 · 協議/策略分離 + 優雅退化 · 讓自動優化變可信", options: { color: INK } },
 ], { x: 0.55, y: 5.25, w: 12.2, h: 0.8, fontFace: BF, fontSize: 13.5, valign: "middle", margin: 0 });
+codeRef(s, "全程對照：docs/evolution_design_notes.md（設計與驗證數據的完整記錄）");
 
 // ============================================================ 3 TASK
 s = p.addSlide();
@@ -87,6 +97,7 @@ card(s, 6.8, 2.8, 5.95, 3.4, NAVY);
 s.addText("這兩個分項常此消彼長", { x: 7.1, y: 3.1, w: 5.4, h: 0.4, fontFace: HF, fontSize: 17, bold: true, color: WHITE, margin: 0 });
 s.addText("「評分超準但文字平庸」 vs 「文字生動但評分偏掉」——後面 #6 會用這個張力做文章。", { x: 7.1, y: 3.65, w: 5.4, h: 1, fontFace: BF, fontSize: 14, color: ICE, margin: 0 });
 s.addText("“ 預測的不是真相，是「這個用戶會怎麼反應」 ”", { x: 7.1, y: 4.9, w: 5.4, h: 1, fontFace: HF, fontSize: 16, italic: true, color: AMBER, margin: 0 });
+codeRef(s, "openevolve_evaluator.py:96 evaluate() · :106-108 combined_score = overall_quality · :149-151 取分項");
 
 // ============================================================ 4 CREWAI PIPELINE
 s = p.addSlide();
@@ -106,6 +117,7 @@ ag.forEach((a, i) => {
 });
 s.addText("Process.sequential — 前一棒的輸出，是後一棒的 context", { x: 0.7, y: 5.1, w: 12, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: BLUE, margin: 0 });
 s.addText("OpenEvolve 的任務：不只進化 prompt 文字，而是優化這條流水線的「各個面向」——工具使用、任務設計、甚至拓撲。", { x: 0.7, y: 5.7, w: 12, h: 0.6, fontFace: BF, fontSize: 14, color: INK, margin: 0 });
+codeRef(s, "src/crews/simulation_crew.py:42 data_retriever · :53 analyst · :65 behavior_simulator · :89 crew(Process.sequential)");
 
 // ============================================================ 5 OPENEVOLVE
 s = p.addSlide();
@@ -126,6 +138,7 @@ s.addText([
   { text: "MAP-Elites 資料庫 · Island 多島模型 · EVOLVE-BLOCK 標記 · combined_score 當 fitness", options: { color: INK } },
 ], { x: 0.7, y: 4.9, w: 12, h: 0.5, fontFace: BF, fontSize: 14, margin: 0 });
 s.addText("核心問題：如何讓系統「自己設計自己」——又不讓它把自己改壞？", { x: 0.7, y: 5.6, w: 12, h: 0.5, fontFace: HF, fontSize: 17, bold: true, italic: true, color: NAVY, margin: 0 });
+codeRef(s, "config/openevolve_config.yaml:10 max_iterations · :18 diff_based_evolution:false · :71-88 database(islands/MAP-Elites)");
 
 // ============================================================ 6 TEN DIRECTIONS
 s = p.addSlide();
@@ -156,6 +169,7 @@ s.addText([
   { text: "36% iteration 失敗", options: { bold: true, color: RED } },
   { text: "。凡能減少 LLM call 的方向都有雙重價值。", options: { color: INK } },
 ], { x: 8.35, y: 4.7, w: 4.2, h: 2, fontFace: BF, fontSize: 13, valign: "top", margin: 0 });
+codeRef(s, "docs/evolution_design_notes.md §2（10 方向總表）· §10 Rate Limit 五層防護 · openevolve_config.yaml:32 retries");
 
 // ============================================================ 7 INCIDENT
 s = p.addSlide();
@@ -174,6 +188,7 @@ card(s, 8.9, 2.7, 3.85, 4.0, NAVY);
 s.addText("0.35", { x: 9.1, y: 3.0, w: 3.4, h: 0.9, fontFace: HF, fontSize: 54, bold: true, color: AMBER, margin: 0 });
 s.addText("fallback 分數", { x: 9.15, y: 3.95, w: 3.4, h: 0.4, fontFace: BF, fontSize: 13, color: ICE, margin: 0 });
 s.addText("多個 iteration 反覆掉到這個地板——工具呼叫一壞，預測流程整個垮掉。", { x: 9.15, y: 4.5, w: 3.45, h: 1.8, fontFace: BF, fontSize: 14, color: WHITE, valign: "top", margin: 0 });
+codeRef(s, "openevolve_evaluator.py:133-137 timeout fallback · :179-184 exception fallback（都回 _result(0.0)）");
 
 // ============================================================ 8 TAXONOMY (core)
 s = p.addSlide();
@@ -193,7 +208,8 @@ tax.forEach((t, i) => {
   s.addText(t[1], { x: 2.0, y, w: 2.6, h: 0.86, fontFace: HF, fontSize: 16, bold: true, color: NAVY, valign: "middle", margin: 0 });
   s.addText(t[2], { x: 4.7, y, w: 8.0, h: 0.86, fontFace: BF, fontSize: 14, color: INK, valign: "middle", margin: 0 });
 });
-s.addText("原本只有 L1 有防護（tasks.yaml 凍結），L2–L5 全裸露 — 這張是全場骨架", { x: 0.6, y: 6.95, w: 12, h: 0.4, fontFace: BF, fontSize: 12.5, italic: true, color: MUTE, margin: 0 });
+s.addText("原本只有 L1 有防護（tasks.yaml 凍結），L2–L5 全裸露 — 這張是全場骨架", { x: 0.6, y: 6.8, w: 12, h: 0.3, fontFace: BF, fontSize: 12.5, italic: true, color: MUTE, margin: 0 });
+codeRef(s, "docs/evolution_design_notes.md §3（5 層分類表）· 防護落地：interaction_tool_wrapper.py · retrieval_executor.py · tool_loader.py");
 
 // ============================================================ 9 INSIGHT (quote)
 s = p.addSlide();
@@ -202,6 +218,7 @@ s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER
 s.addText("關鍵洞察", { x: 1, y: 1.7, w: 11, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 3, margin: 0 });
 s.addText("fitness 只告訴你\n「壞了」，不告訴你\n「哪裡壞了」", { x: 0.95, y: 2.4, w: 11.5, h: 2.6, fontFace: HF, fontSize: 42, bold: true, color: WHITE, lineSpacing: 48, margin: 0 });
 s.addText("這就是為什麼有些突變看似無害，卻造成崩潰——單一純量分數無法做 credit assignment。", { x: 1, y: 5.5, w: 11, h: 0.8, fontFace: BF, fontSize: 17, color: ICE, margin: 0 });
+codeRef(s, "docs/evolution_design_notes.md §3（關鍵洞察）— 解法是 L0 把盲區變訊號", true);
 
 // ============================================================ 10 PROTOCOL/POLICY
 s = p.addSlide();
@@ -215,6 +232,7 @@ s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 4.1, w: 0.12, h: 1.9, fill: { color:
 s.addText("策略層（Policy）— 自由進化", { x: 0.95, y: 4.3, w: 11.6, h: 0.5, fontFace: HF, fontSize: 18, bold: true, color: AMBER, margin: 0 });
 s.addText("「工具被怎麼使用」：查什麼、查多少、何時查、怎麼消化結果、甚至「需要什麼新工具」", { x: 0.95, y: 4.95, w: 11.6, h: 0.9, fontFace: BF, fontSize: 14.5, color: INK, margin: 0 });
 s.addText([{ text: "安全憲法　", options: { bold: true, color: RED } }, { text: "最壞 = 優雅退化（graceful degradation），絕不是災難性崩潰。", options: { color: INK } }], { x: 0.6, y: 6.3, w: 12, h: 0.5, fontFace: BF, fontSize: 15, margin: 0 });
+codeRef(s, "協議：retrieval_executor.py:28-30 ALLOWED_QUERIES/STRATEGIES（凍結）｜策略：config/agents_evolving.yaml:11-16 retrieval_policy（進化）");
 
 // ============================================================ 11 SOLUTION OVERVIEW
 s = p.addSlide();
@@ -232,7 +250,8 @@ lay.forEach((l, i) => {
   s.addText(l[1], { x: 1.6, y: y + 0.72, w: 2.2, h: 0.4, fontFace: BF, fontSize: 13, color: MUTE, margin: 0 });
   s.addText(l[2], { x: 4.0, y, w: 8.6, h: 1.35, fontFace: BF, fontSize: 16, color: INK, valign: "middle", margin: 0 });
 });
-s.addText("每一層都遵守同一條安全憲法：最壞只是低分，不是崩潰。", { x: 0.6, y: 6.75, w: 12, h: 0.4, fontFace: BF, fontSize: 13, italic: true, color: MUTE, margin: 0 });
+s.addText("每一層都遵守同一條安全憲法：最壞只是低分，不是崩潰。", { x: 0.6, y: 6.68, w: 12, h: 0.3, fontFace: BF, fontSize: 13, italic: true, color: MUTE, margin: 0 });
+codeRef(s, "L0 interaction_tool_wrapper.py · L1 retrieval_executor.py · L2 tool_loader.py（皆在 src/tools/）");
 
 // ============================================================ 12 L0
 s = p.addSlide();
@@ -250,6 +269,7 @@ card(s, 6.9, 2.0, 5.85, 4.6, NAVY);
 s.addText("為什麼是地基", { x: 7.2, y: 2.25, w: 5, h: 0.4, fontFace: HF, fontSize: 17, bold: true, color: AMBER, margin: 0 });
 s.addText("沒有 L0，L1 的 clamp、L2 的 quarantine 效果全都「看不見」——只能瞎子摸象。", { x: 7.2, y: 2.8, w: 5.3, h: 1.2, fontFace: BF, fontSize: 15, color: WHITE, margin: 0 });
 s.addText([{ text: "設計重點　", options: { bold: true, color: ICE } }, { text: "純觀測增量 / env var opt-in — 預設行為逐位元不變。", options: { color: WHITE } }], { x: 7.2, y: 4.5, w: 5.3, h: 1.5, fontFace: BF, fontSize: 14, valign: "top", margin: 0 });
+codeRef(s, "interaction_tool_wrapper.py:17 _TOOL_CALL_LOG · :21 _record · :26 drain_tool_log ｜ openevolve_evaluator.py:31 _summarize_tool_use");
 
 // ============================================================ 13 L1 executor
 s = p.addSlide();
@@ -278,6 +298,7 @@ s.addText([
   { text: "k=999999 → 50 · 亂掰 query → 過濾 · 整個爛掉 → 退預設", options: { fontFace: CF, fontSize: 11.5, color: MUTE } },
 ], { x: 7.2, y: 3.4, w: 5.3, h: 1.4, fontSize: 14.5, lineSpacing: 20, margin: 0 });
 s.addText("最壞 = 退化成 baseline 檢索，pipeline 永不崩。", { x: 7.2, y: 5.2, w: 5.3, h: 1, fontFace: BF, fontSize: 14, italic: true, color: BLUE, margin: 0 });
+codeRef(s, "src/tools/retrieval_executor.py:44 _clamp_int · :53 normalize_policy（clamp）· :103 _sample_reviews · :140 execute_policy");
 
 // ============================================================ 14 whitelist != no space
 s = p.addSlide();
@@ -294,6 +315,7 @@ s.addText([
   { text: "真正的天花板是資料集", options: { bold: true, color: RED } },
   { text: "（只有 user / item / review 三張表），不是白名單——後者只是忠實反映底層資料邊界。", options: { color: INK } },
 ], { x: 0.6, y: 5.1, w: 12.15, h: 1.2, fontFace: BF, fontSize: 16, margin: 0 });
+codeRef(s, "src/tools/retrieval_executor.py:29 ALLOWED_QUERIES（字母表）· :33-37 DEFAULT_POLICY · :53 normalize_policy（拼句子）");
 
 // ============================================================ 15 L1 wiring before/after
 s = p.addSlide();
@@ -315,6 +337,7 @@ s.addText([
   { text: "  ↓ 只萃取 {retrieved_context}", options: { color: WHITE } },
 ], { x: 7.1, y: 3.15, w: 5.4, h: 1.9, fontSize: 14, lineSpacing: 30, margin: 0 });
 s.addText("純文字任務 — 不會在工具呼叫上崩潰。", { x: 7.1, y: 5.35, w: 5.4, h: 0.6, fontFace: BF, fontSize: 14, italic: true, color: ICE, margin: 0 });
+codeRef(s, "src/flows/serving_flow.py:85-93 execute_policy → retrieved_context 注入 ｜ simulation_crew.py:42-50 data_retriever 無 tools");
 
 // ============================================================ 16 L2 four gates
 s = p.addSlide();
@@ -334,6 +357,7 @@ gates.forEach((g, i) => {
   s.addText(g[2], { x: x + 0.95, y: y + 0.72, w: 4.7, h: 0.6, fontFace: BF, fontSize: 13, color: MUTE, margin: 0 });
 });
 s.addText([{ text: "ReadOnlyKit　", options: { bold: true, color: AMBER } }, { text: "只暴露 get_user / get_item / get_reviews — 萬流歸宗到唯讀資料，碰不到檔案系統 / 網路 / groundtruth。", options: { color: INK } }], { x: 0.6, y: 6.25, w: 12.15, h: 0.6, fontFace: BF, fontSize: 13, margin: 0 });
+codeRef(s, "src/tools/tool_loader.py:77 ast_safety_scan · :106 signature_ok · :120 trial_run · :156 _wrap_as_crewai_tool · :60 ReadOnlyKit");
 
 // ============================================================ 17 docstring + placement
 s = p.addSlide();
@@ -359,6 +383,7 @@ s.addText([
   { text: "為何不是 data_retriever？", options: { bold: true, color: ICE, breakLine: true } },
   { text: "會把 L1 剛清掉的崩潰風險請回來 · 職責混淆 · 時機太早（還沒分析脈絡）", options: { color: WHITE } },
 ], { x: 7.2, y: 4.0, w: 5.3, h: 2.4, fontFace: BF, fontSize: 13.5, valign: "top", lineSpacing: 18, margin: 0 });
+codeRef(s, "src/tools/tool_loader.py:156-177 _wrap_as_crewai_tool（docstring→description）· simulation_crew.py:53-62 analyst tools=_load_analyst_tools()");
 
 // ============================================================ 18 #7 train/val
 s = p.addSlide();
@@ -379,6 +404,7 @@ s.addText([
   { text: "差距 0.03 → ✅ 真的學會了", options: { color: GREEN, bold: true } },
 ], { x: 7.1, y: 3.6, w: 5.4, h: 2, fontSize: 15, lineSpacing: 30, margin: 0 });
 s.addText("make validate-holdout — disjoint 已驗證 overlap = 0", { x: 0.6, y: 6.5, w: 12, h: 0.4, fontFace: CF, fontSize: 13, color: MUTE, margin: 0 });
+codeRef(s, "openevolve_evaluator.py:83-84 OPENEVOLVE_TASK_DIR · scripts/validate_holdout.py:25 切 holdout · create_sampled_dataset.py:8 disjoint");
 
 // ============================================================ 19 #6 MAP-Elites
 s = p.addSlide();
@@ -405,6 +431,7 @@ s.addText([
   { text: " 只決定座標（多樣性）", options: { color: WHITE } },
 ], { x: 7.8, y: 3.5, w: 4.7, h: 1.6, fontSize: 13.5, lineSpacing: 22, margin: 0 });
 s.addText("保留 trade-off 前沿各路精英，雜交出兼顧者。", { x: 7.8, y: 5.3, w: 4.7, h: 1, fontFace: BF, fontSize: 13.5, italic: true, color: ICE, margin: 0 });
+codeRef(s, "config/openevolve_config.yaml:85-88 feature_dimensions（8×8）· openevolve_evaluator.py:47-59 _result(extra_metrics) · :174-177");
 
 // ============================================================ 20 engineering lessons
 s = p.addSlide();
@@ -418,6 +445,7 @@ s.addText("combined_score=0.8452 看似完美，但 agent.tools == [] — 工具
 card(s, 0.6, 4.5, 12.15, 2.1, NAVY);
 s.addText("“ 分數健康 ≠ 功能正確 ”", { x: 0.95, y: 4.75, w: 11.5, h: 0.7, fontFace: HF, fontSize: 28, bold: true, color: AMBER, margin: 0 });
 s.addText("graceful fallback 會讓「沒裝上工具」偽裝成「分數正常」。驗證要查功能本身（tools 清單），不能只看分數。", { x: 0.95, y: 5.55, w: 11.5, h: 0.9, fontFace: BF, fontSize: 15, color: WHITE, margin: 0 });
+codeRef(s, "tool_loader.py:139-146 _safe_import（bug#1）· :156-177 docstring 轉移（bug#2）· simulation_crew.py:21-30 graceful [] 蓋住失敗", true);
 
 // ============================================================ 21 results
 s = p.addSlide();
@@ -451,6 +479,7 @@ s.addText([
   { text: "進化跑：", options: { bold: true, color: NAVY } },
   { text: " v1 best 0.79 · v3 best 0.64（rate limit 重災）· L1 驗證 0.78 · 單元測試 46 全綠", options: { color: INK } },
 ], { x: 0.6, y: 6.4, w: 12.15, h: 0.5, fontFace: BF, fontSize: 13.5, margin: 0 });
+codeRef(s, "docs/evolution_design_notes.md §12.4（接線前後對照）· §12.3（進化跑歷史）");
 
 // ============================================================ 22 full picture / takeaways
 s = p.addSlide();
@@ -477,6 +506,7 @@ tk.forEach((t, i) => {
   chip(s, 5.1, y + 0.28, `${i + 1}`, AMBER, NAVY);
   s.addText(t, { x: 5.75, y, w: 6.85, h: 1.05, fontFace: BF, fontSize: 14.5, color: INK, valign: "middle", margin: 0 });
 });
+codeRef(s, "docs/evolution_design_notes.md §11（進度與 PR 對照）· §12.7（完整架構數據：baseline 0.72 → best 0.842）");
 
 // ============================================================ 23 closing
 s = p.addSlide();
@@ -489,5 +519,6 @@ s.addText([
   { text: "深入　", options: { bold: true, color: AMBER } },
   { text: "docs/evolution_design_notes.md · docs/student_integration_guide.md", options: { color: ICE } },
 ], { x: 1, y: 4.0, w: 11.5, h: 1.4, fontFace: BF, fontSize: 16, lineSpacing: 30, margin: 0 });
+codeRef(s, "tests/test_retrieval_executor.py + tests/test_tool_loader.py（46 全綠）· docs/evolution_design_notes.md", true);
 
-p.writeFile({ fileName: "OpenEvolve_CrewAI_教學投影片.pptx" }).then(f => console.log("WROTE", f));
+p.writeFile({ fileName: "/tmp/deck/OpenEvolve_CrewAI_教學投影片.pptx" }).then(f => console.log("WROTE", f));
