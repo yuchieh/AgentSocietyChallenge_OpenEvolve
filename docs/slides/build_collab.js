@@ -31,6 +31,13 @@ function chip(s, x, y, txt, fill, tcolor) {
 function arrow(s, x, y, w, color) {
   s.addText("→", { x, y, w: w || 0.55, h: 0.8, fontFace: HF, fontSize: 28, bold: true, color: color || AMBER, align: "center", valign: "middle", margin: 0 });
 }
+// 程式對照頁尾：把每一頁連到真實實作（節錄或 檔名:行號）
+function codeRef(s, txt, dark) {
+  s.addText([
+    { text: "‹code›  ", options: { fontFace: CF, color: AMBER, bold: true } },
+    { text: txt, options: { fontFace: CF, color: dark ? "8FA3C8" : MUTE } },
+  ], { x: 0.55, y: 7.2, w: 12.4, h: 0.22, fontSize: 9, valign: "middle", margin: 0 });
+}
 
 // ============================================================ 1 TITLE
 let s = p.addSlide();
@@ -39,7 +46,6 @@ s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER
 s.addText("HUMAN × CLAUDE CODE × OPENEVOLVE", { x: 1, y: 1.8, w: 11.5, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 3, margin: 0 });
 s.addText("三層 AI 協作工作流", { x: 0.95, y: 2.25, w: 11.5, h: 1.3, fontFace: HF, fontSize: 46, bold: true, color: WHITE, margin: 0 });
 s.addText("當 AI 也在指揮另一個 AI——我如何把自主性一層層往下委派", { x: 1, y: 3.85, w: 11.5, h: 0.6, fontFace: BF, fontSize: 19, color: ICE, margin: 0 });
-// three-chip teaser chain
 const chain = [["我", HUMAN], ["Claude", CLAUDE], ["OpenEvolve", OE]];
 chain.forEach((c, i) => {
   const x = 1.0 + i * 3.7;
@@ -48,6 +54,7 @@ chain.forEach((c, i) => {
   if (i < 2) s.addText("▶", { x: x + 2.85, y: 5.2, w: 0.8, h: 0.8, align: "center", valign: "middle", fontFace: BF, fontSize: 16, color: AMBER, margin: 0 });
 });
 s.addText("一場關於「人 + AI + 進化」安全協作的分享", { x: 1, y: 6.5, w: 11.5, h: 0.4, fontFace: BF, fontSize: 13, color: "8FA3C8", margin: 0 });
+codeRef(s, "三層對應：我→config/*.yaml ｜ Claude→src/ + tests/ ｜ OpenEvolve→EVOLVE-BLOCK", true);
 
 // ============================================================ 2 不尋常的協作
 s = p.addSlide();
@@ -63,6 +70,7 @@ s.addText([
   { text: "還是「你 + 一個會自己做決定的夥伴」？", options: { color: ICE } },
 ], { x: 0.95, y: 3.45, w: 11.5, h: 1.4, fontFace: HF, fontSize: 24, lineSpacing: 38, valign: "middle", margin: 0 });
 s.addText("這場分享，是後者——而且夥伴還帶著它自己的夥伴。", { x: 0.6, y: 5.5, w: 12, h: 0.6, fontFace: BF, fontSize: 17, italic: true, color: BLUE, margin: 0 });
+codeRef(s, "三個智能體：我（決策）· Claude（src/ 實作）· OpenEvolve（evolvable_tools.py:18 EVOLVE-BLOCK 內突變）");
 
 // ============================================================ 3 議程 + 學習目標
 s = p.addSlide();
@@ -86,6 +94,7 @@ s.addText([
   { text: "我想帶給你的　", options: { bold: true, color: AMBER } },
   { text: "認識多層 AI 協作架構 · 學會配置「自主 vs 護欄」· 帶走 5 個協作模式 · 一條判準：什麼我做、什麼交給 AI、什麼交給進化", options: { color: INK } },
 ], { x: 0.55, y: 5.25, w: 12.2, h: 0.8, fontFace: BF, fontSize: 13.5, valign: "middle", margin: 0 });
+codeRef(s, "完整文字：docs/collaboration_workflow_outline.md ｜ 技術細節：docs/evolution_design_notes.md");
 
 // ============================================================ 4 三個角色登場
 s = p.addSlide();
@@ -104,6 +113,7 @@ roles.forEach((r, i) => {
   s.addText(r[2], { x: x + 0.25, y: 3.7, w: 3.35, h: 1.6, fontFace: BF, fontSize: 15, color: INK, lineSpacing: 24, margin: 0 });
 });
 s.addText("關鍵：後兩者都是 AI，但角色完全不同；我站在最外層指揮。", { x: 0.6, y: 5.9, w: 12, h: 0.5, fontFace: BF, fontSize: 15, italic: true, color: BLUE, margin: 0 });
+codeRef(s, "我+Claude 寫 config/agents.yaml（正式）· config/agents_evolving.yaml（種子）｜ OpenEvolve 改 evolvable_tools.py:18-58");
 
 // ============================================================ 5 三層嵌套架構（核心圖）
 s = p.addSlide();
@@ -123,11 +133,11 @@ layers.forEach((l, i) => {
 });
 s.addText("← 自主程度越往右越高　|　護欄也要越往右越強 →", { x: 0.7, y: 5.0, w: 11.85, h: 0.4, fontFace: BF, fontSize: 14, bold: true, color: NAVY, align: "center", margin: 0 });
 s.addText("這不是「我用工具」，是「我把自主性一層層往下委派」的三層鏈。", { x: 0.7, y: 5.7, w: 12, h: 0.5, fontFace: HF, fontSize: 17, italic: true, color: NAVY, margin: 0 });
+codeRef(s, "我→config/*.yaml ｜ Claude→src/tools/ + src/crews/ + src/flows/ ｜ OpenEvolve→agents_evolving.yaml:1-44 EVOLVE-BLOCK");
 
 // ============================================================ 5b 架構師 vs 探勘者（關係圖）
 s = p.addSlide();
 header(s, "Part 1 · 協作架構", "Claude × OpenEvolve：架構師 vs 探勘者");
-// two role cards
 card(s, 0.6, 1.95, 5.9, 1.95, "EAF0FA");
 s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 1.95, w: 0.12, h: 1.95, fill: { color: CLAUDE } });
 s.addText("Claude＝架構師", { x: 0.9, y: 2.15, w: 5.4, h: 0.45, fontFace: HF, fontSize: 18, bold: true, color: CLAUDE, margin: 0 });
@@ -136,7 +146,6 @@ card(s, 6.85, 1.95, 5.9, 1.95, "FBF1E0");
 s.addShape(p.shapes.RECTANGLE, { x: 6.85, y: 1.95, w: 0.12, h: 1.95, fill: { color: OE } });
 s.addText("OpenEvolve＝探勘者", { x: 7.15, y: 2.15, w: 5.4, h: 0.45, fontFace: HF, fontSize: 18, bold: true, color: "B5791F", margin: 0 });
 s.addText("無意圖的突變 + 篩選 · 只知「是什麼」\n大量 · 低槓桿 · 靠數量", { x: 7.15, y: 2.65, w: 5.4, h: 1.1, fontFace: BF, fontSize: 14, color: INK, lineSpacing: 22, margin: 0 });
-// cycle
 const cyc = [["① 設計搜尋空間", "可進化範圍 + 護欄", CLAUDE], ["② 大規模探索", "iter22 · 8 次崩潰", OE], ["③ 分析與調整", "診斷 → 改框架", CLAUDE]];
 cyc.forEach((c, i) => {
   const x = 0.6 + i * 4.25;
@@ -146,7 +155,8 @@ cyc.forEach((c, i) => {
   if (i < 2) arrow(s, x + 3.62, 4.65, 0.6, NAVY);
 });
 s.addText("↺ 下一輪：用發現調整搜尋空間", { x: 0.6, y: 6.05, w: 12.15, h: 0.4, fontFace: BF, fontSize: 13, italic: true, color: NAVY, align: "center", margin: 0 });
-s.addText("不是誰比較強，是不同物種、各補一塊——Claude 會精準設計但不會盲搜，OpenEvolve 會盲搜但不懂自己找到了什麼。", { x: 0.6, y: 6.55, w: 12.15, h: 0.5, fontFace: BF, fontSize: 13.5, color: INK, margin: 0 });
+s.addText("不是誰比較強，是不同物種、各補一塊——Claude 會精準設計但不會盲搜，OpenEvolve 會盲搜但不懂自己找到了什麼。", { x: 0.6, y: 6.5, w: 12.15, h: 0.5, fontFace: BF, fontSize: 13.5, color: INK, margin: 0 });
+codeRef(s, "Claude 搭框架 src/tools/tool_loader.py（77 AST / 120 沙箱）· OpenEvolve 在 evolvable_tools.py:18-58 EVOLVE-BLOCK 內探索");
 
 // ============================================================ 6 自主 vs 護欄
 s = p.addSlide();
@@ -175,9 +185,10 @@ for (let ri = 0; ri < gv.length; ri++) {
   }
   td.push(row);
 }
-s.addTable(td, { x: 0.6, y: 2.1, w: 12.15, colW: [3.0, 3.4, 5.75], rowH: [0.6, 0.95, 0.95, 0.95], border: { pt: 1, color: "E2E8F0" } });
-card(s, 0.6, 6.0, 12.15, 1.0, NAVY);
-s.addText("金句：我越是放手讓它自主，越要先建好「最壞只是退化、不是崩潰」的護欄。", { x: 0.95, y: 6.0, w: 11.5, h: 1.0, fontFace: HF, fontSize: 18, bold: true, color: AMBER, valign: "middle", margin: 0 });
+s.addTable(td, { x: 0.6, y: 2.1, w: 12.15, colW: [3.0, 3.4, 5.75], rowH: [0.6, 0.9, 0.9, 0.9], border: { pt: 1, color: "E2E8F0" } });
+card(s, 0.6, 5.95, 12.15, 0.95, NAVY);
+s.addText("金句：我越是放手讓它自主，越要先建好「最壞只是退化、不是崩潰」的護欄。", { x: 0.95, y: 5.95, w: 11.5, h: 0.95, fontFace: HF, fontSize: 18, bold: true, color: AMBER, valign: "middle", margin: 0 });
+codeRef(s, "護欄落地：retrieval_executor.py:53 normalize_policy（clamp）· tool_loader.py:77-177（AST→沙箱→包裝）");
 
 // ============================================================ 7 協作循環
 s = p.addSlide();
@@ -186,7 +197,7 @@ const ring = [
   ["我的意圖", HUMAN], ["Claude 實作", CLAUDE], ["驗證", CLAUDE],
   ["誠實報告", CLAUDE], ["我決策", HUMAN],
 ];
-const cx = 6.66, cy = 4.25, radX = 3.95, radY = 1.85, cw = 2.4, ch = 0.85;
+const cx = 6.66, cy = 4.15, radX = 3.95, radY = 1.7, cw = 2.4, ch = 0.85;
 ring.forEach((r, i) => {
   const ang = -90 + i * (360 / ring.length);
   const rx = cx + radX * Math.cos(ang * Math.PI / 180) - cw / 2;
@@ -197,6 +208,7 @@ ring.forEach((r, i) => {
 });
 s.addText("↻", { x: cx - 0.6, y: cy - 0.65, w: 1.2, h: 1.2, fontFace: HF, fontSize: 50, bold: true, color: AMBER, align: "center", valign: "middle", margin: 0 });
 s.addText("（下一輪意圖）", { x: cx - 1.0, y: cy + 0.5, w: 2.0, h: 0.4, fontFace: BF, fontSize: 11, italic: true, color: MUTE, align: "center", margin: 0 });
+codeRef(s, "工作流見 CLAUDE.md「Git 工作流程」(main 只接受 PR) · 已落地 PR 對照 docs/evolution_design_notes.md §11");
 
 // ============================================================ 8 為什麼值得學
 s = p.addSlide();
@@ -205,6 +217,7 @@ s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER
 s.addText("為什麼這個架構值得學", { x: 1, y: 1.7, w: 11, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 2, margin: 0 });
 s.addText("AI 越來越會\n「使用其他 AI / 工具」", { x: 0.95, y: 2.3, w: 11.5, h: 1.8, fontFace: HF, fontSize: 38, bold: true, color: WHITE, lineSpacing: 46, margin: 0 });
 s.addText("協作不再是單層。我想用這個專案示範：如何安全地把自主性一層層往下委派。", { x: 1, y: 4.7, w: 11, h: 1, fontFace: BF, fontSize: 19, color: ICE, margin: 0 });
+codeRef(s, "整體目標見 docs/evolution_design_notes.md §1（背景與目標）", true);
 
 // ============================================================ 9 我的角色
 s = p.addSlide();
@@ -223,6 +236,7 @@ me.forEach((m, i) => {
   s.addText(m[1], { x: 4.2, y, w: 8.4, h: 0.86, fontFace: BF, fontSize: 15, color: INK, valign: "middle", margin: 0 });
 });
 s.addText("真實例子：我堅持「main 只接受 PR」——有次 Claude 忘了開分支，被我當場糾正、立刻改回。", { x: 0.6, y: 6.05, w: 12.15, h: 0.5, fontFace: BF, fontSize: 14, italic: true, color: BLUE, margin: 0 });
+codeRef(s, "規則寫在 CLAUDE.md「Git 工作流程：main 只接受 PR merge，不直接 commit」");
 
 // ============================================================ 10 Claude 的角色
 s = p.addSlide();
@@ -239,8 +253,9 @@ cl.forEach((t, i) => {
   s.addShape(p.shapes.OVAL, { x: 0.7, y: y + 0.12, w: 0.16, h: 0.16, fill: { color: CLAUDE } });
   s.addText(t, { x: 1.0, y, w: 11.5, h: 0.5, fontFace: BF, fontSize: 17, color: INK, valign: "middle", margin: 0 });
 });
-card(s, 0.6, 6.15, 12.15, 0.95, NAVY);
-s.addText("真實例子：Claude 讀 OpenEvolve 原始碼，發現「EVOLVE-BLOCK 恰好一個」其實是建議、不是硬限制。", { x: 0.95, y: 6.15, w: 11.5, h: 0.95, fontFace: BF, fontSize: 14.5, color: WHITE, valign: "middle", margin: 0 });
+card(s, 0.6, 6.1, 12.15, 0.95, NAVY);
+s.addText("真實例子：Claude 讀 OpenEvolve 原始碼，發現「EVOLVE-BLOCK 恰好一個」其實是建議、不是硬限制。", { x: 0.95, y: 6.1, w: 11.5, h: 0.95, fontFace: BF, fontSize: 14.5, color: WHITE, valign: "middle", margin: 0 });
+codeRef(s, "讀碼結論記在 docs/evolution_design_notes.md §9（EVOLVE-BLOCK 機制的真相：parse_evolve_blocks 從未被呼叫）");
 
 // ============================================================ 11 OpenEvolve 的角色
 s = p.addSlide();
@@ -255,6 +270,7 @@ s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 3.0, w: 0.12, h: 2.4, fill: { color:
 s.addText("真實例子", { x: 0.95, y: 3.2, w: 11.4, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: "B5791F", margin: 0 });
 s.addText("它自己進化出「按 user_std 切 4 段的評分預測公式」——沒人教它，連我和 Claude 都沒寫過。", { x: 0.95, y: 3.75, w: 11.4, h: 1.4, fontFace: BF, fontSize: 18, color: INK, lineSpacing: 28, margin: 0 });
 s.addText("它能「找到」，但它不知道自己找到了什麼——這正是探勘者與架構師的分界。", { x: 0.6, y: 5.7, w: 12, h: 0.5, fontFace: BF, fontSize: 15, italic: true, color: BLUE, margin: 0 });
+codeRef(s, "進化空間：config/agents_evolving.yaml:1-44 EVOLVE-BLOCK（prompt）+ evolvable_tools.py:18-58（工具）");
 
 // ============================================================ 12 三者互補
 s = p.addSlide();
@@ -272,6 +288,7 @@ miss.forEach((m, i) => {
   s.addText(m[1], { x: 5.1, y, w: 7.5, h: 1.2, fontFace: BF, fontSize: 16, color: INK, valign: "middle", margin: 0 });
 });
 s.addText("三層各補一塊——缺了我這一層，就沒方向。", { x: 0.6, y: 6.5, w: 12, h: 0.4, fontFace: BF, fontSize: 15, italic: true, color: NAVY, align: "center", margin: 0 });
+codeRef(s, "「v3 的 36% 崩潰 → 完整架構 0 次」對照見 docs/evolution_design_notes.md §12.7");
 
 // ============================================================ 13 Pattern 1（招牌）
 s = p.addSlide();
@@ -289,7 +306,8 @@ s.addText([
   { text: "→ 落地：L0 觀測 + L1 clamp + L2 sandbox", options: { color: INK } },
 ], { x: 7.1, y: 2.75, w: 5.45, h: 2.3, fontSize: 14, lineSpacing: 24, margin: 0 });
 s.addText([{ text: "成果　", options: { bold: true, color: GREEN } }, { text: "工具崩潰率 v3 的 36% → 0 次", options: { bold: true, color: GREEN } }], { x: 7.1, y: 5.7, w: 5.4, h: 0.5, fontFace: HF, fontSize: 16, margin: 0 });
-s.addText("好問題的價值高於好答案——是我「往深處問」，把一個隨手的修補逼成可遷移的分層框架。", { x: 0.6, y: 6.6, w: 12.15, h: 0.5, fontFace: BF, fontSize: 14, italic: true, color: AMBER, align: "center", margin: 0 });
+s.addText("好問題的價值高於好答案——是我「往深處問」，把一個隨手的修補逼成可遷移的分層框架。", { x: 0.6, y: 6.6, w: 12.15, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: AMBER, align: "center", margin: 0 });
+codeRef(s, "5 層分類學 docs/evolution_design_notes.md §3 ｜ 落地 src/tools/{interaction_tool_wrapper,retrieval_executor,tool_loader}.py");
 
 // ============================================================ 14 Pattern 2
 s = p.addSlide();
@@ -310,8 +328,9 @@ s.addText([
   { text: "[]", options: { fontFace: CF, fontSize: 18, bold: true, color: RED, breakLine: true } },
   { text: "工具根本沒裝上！揭露 + 補回歸測試。", options: { color: INK } },
 ], { x: 7.1, y: 2.9, w: 5.4, h: 1.8, fontSize: 15, lineSpacing: 26, margin: 0 });
-card(s, 0.6, 5.7, 12.15, 1.35, NAVY);
-s.addText("“ 分數健康 ≠ 功能正確 ”　AI 的誠實性，是協作的地基。", { x: 0.95, y: 5.7, w: 11.5, h: 1.35, fontFace: HF, fontSize: 22, bold: true, color: AMBER, valign: "middle", margin: 0 });
+card(s, 0.6, 5.6, 12.15, 1.35, NAVY);
+s.addText("“ 分數健康 ≠ 功能正確 ”　AI 的誠實性，是協作的地基。", { x: 0.95, y: 5.6, w: 11.5, h: 1.35, fontFace: HF, fontSize: 22, bold: true, color: AMBER, valign: "middle", margin: 0 });
+codeRef(s, "成因 simulation_crew.py:21-30 graceful [] 蓋住失敗 · 修正 tool_loader.py:164 · 回歸測試 tests/test_tool_loader.py:185-203");
 
 // ============================================================ 15 Pattern 3
 s = p.addSlide();
@@ -325,6 +344,7 @@ irr.forEach((t, i) => {
   s.addText(t, { x: x + 0.25, y, w: 3.5, h: 0.95, fontFace: CF, fontSize: 15, bold: true, color: NAVY, valign: "middle", margin: 0 });
 });
 s.addText("真實例子：建新 repo、裝 LibreOffice 前，Claude 都先問我確認。把關「不可逆」是我這一層的核心職責。", { x: 0.6, y: 5.7, w: 12.15, h: 0.6, fontFace: BF, fontSize: 14.5, italic: true, color: BLUE, margin: 0 });
+codeRef(s, "原則寫在 CLAUDE.md「Git 工作流程」(main 只接受 PR merge，不直接 commit)");
 
 // ============================================================ 16 Pattern 4
 s = p.addSlide();
@@ -336,6 +356,7 @@ card(s, 6.8, 2.2, 5.95, 3.5, "EAF0FA");
 s.addText("Claude 補我的盲點", { x: 7.1, y: 2.45, w: 5.3, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: CLAUDE, margin: 0 });
 s.addText("我一提醒，Claude 就解釋 caffeinate 機制、幫我設定（防系統睡眠但讓螢幕休息）——這是工具細節。", { x: 7.1, y: 3.0, w: 5.4, h: 2.4, fontFace: BF, fontSize: 16, color: INK, lineSpacing: 26, margin: 0 });
 s.addText("我的「環境知識」× Claude 的「工具細節」——兩種知識互補，缺一進化就跑不完。", { x: 0.6, y: 6.0, w: 12.15, h: 0.6, fontFace: BF, fontSize: 15, italic: true, color: NAVY, align: "center", margin: 0 });
+codeRef(s, "完整 50-iter 怎麼跑完：docs/evolution_design_notes.md §12.7(b)（nohup 脫離 harness + caffeinate -i -s）");
 
 // ============================================================ 17 Pattern 5
 s = p.addSlide();
@@ -348,6 +369,7 @@ card(s, 6.8, 2.9, 5.95, 2.9, "E7F2EC");
 s.addText("完整架構", { x: 7.1, y: 3.15, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: GREEN, margin: 0 });
 s.addText([{ text: "0", options: { fontFace: HF, fontSize: 52, bold: true, color: GREEN, breakLine: true } }, { text: "次工具呼叫崩潰", options: { color: INK } }], { x: 7.1, y: 3.7, w: 5.4, h: 1.8, lineSpacing: 36, margin: 0 });
 s.addText("我委派自主性的前提，是先建好「最壞只是退化」的護欄。", { x: 0.6, y: 6.1, w: 12.15, h: 0.5, fontFace: HF, fontSize: 18, bold: true, italic: true, color: NAVY, align: "center", margin: 0 });
+codeRef(s, "三層護欄：interaction_tool_wrapper.py(L0) · retrieval_executor.py(L1) · tool_loader.py(L2)｜數據 §12.7");
 
 // ============================================================ 18 五模式總表
 s = p.addSlide();
@@ -366,7 +388,8 @@ pat.forEach((r, i) => {
   s.addText(r[1], { x: 1.55, y, w: 3.6, h: 0.84, fontFace: HF, fontSize: 16, bold: true, color: NAVY, valign: "middle", margin: 0 });
   s.addText(r[2], { x: 5.3, y, w: 7.3, h: 0.84, fontFace: BF, fontSize: 14.5, color: INK, valign: "middle", margin: 0 });
 });
-s.addText("💬 哪一個模式，你明天就能用在自己的專案？", { x: 0.6, y: 6.85, w: 12, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
+s.addText("💬 哪一個模式，你明天就能用在自己的專案？", { x: 0.6, y: 6.78, w: 12, h: 0.3, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
+codeRef(s, "五模式完整版見 docs/collaboration_workflow_outline.md（Part 3）");
 
 // ============================================================ 19 三層跑出進化產物
 s = p.addSlide();
@@ -390,6 +413,7 @@ s.addText([
   { text: "elif < 1.0: +0.45·…   elif < 1.3: +0.30·…   else: user_median + 0.20·…", options: { color: ICE, breakLine: true } },
   { text: "clamp [1,5] · round 0.5", options: { color: WHITE } },
 ], { x: 0.9, y: 5.6, w: 11.5, h: 1.2, fontFace: CF, fontSize: 13, lineSpacing: 22, margin: 0 });
+codeRef(s, "進化目標檔 config/agents_evolving.yaml EVOLVE-BLOCK · iter22 數據 docs/evolution_design_notes.md §12.7(b)");
 
 // ============================================================ 20 沒有一層能單獨做到
 s = p.addSlide();
@@ -408,6 +432,7 @@ none.forEach((n, i) => {
   s.addText(n[1], { x: 4.1, y, w: 8.3, h: 1.0, fontFace: HF, fontSize: 22, color: WHITE, valign: "middle", margin: 0 });
 });
 s.addText("沒有任何一層能單獨做到。", { x: 1, y: 6.4, w: 11, h: 0.5, fontFace: HF, fontSize: 20, bold: true, italic: true, color: AMBER, margin: 0 });
+codeRef(s, "三層協作數據 docs/evolution_design_notes.md §12.7（baseline 0.72 → best 0.842，崩潰率 16%）", true);
 
 // ============================================================ 21 iter22 之後（深挖）
 s = p.addSlide();
@@ -430,6 +455,7 @@ s.addText([
   { text: "Claude 給我的診斷：", options: { bold: true, color: AMBER } },
   { text: "iter22 是局部最優。OpenEvolve 能「找到」它，但「為什麼停在這、怎麼跳出去」是探勘者結構上做不到的——它沒有「局部最優」這個概念。", options: { color: WHITE } },
 ], { x: 0.95, y: 5.85, w: 11.5, h: 1.25, fontFace: BF, fontSize: 14.5, valign: "middle", lineSpacing: 22, margin: 0 });
+codeRef(s, "島/遷移設定 config/openevolve_config.yaml:71-78（num_islands:3, migration_interval/rate）· 數據 §12.7(b)");
 
 // ============================================================ 22 失敗也是洞察
 s = p.addSlide();
@@ -440,6 +466,7 @@ s.addText([{ text: "5 次", options: { fontFace: HF, fontSize: 44, bold: true, c
 card(s, 6.8, 3.0, 5.95, 2.4, "FBF1E0");
 s.addText([{ text: "3 次", options: { fontFace: HF, fontSize: 44, bold: true, color: "B5791F", breakLine: true } }, { text: "rate limit 429", options: { color: INK } }, { text: "（NVIDIA NIM 限流）", options: { fontSize: 12, color: MUTE } }], { x: 7.1, y: 3.3, w: 5.4, h: 1.9, lineSpacing: 30, margin: 0 });
 s.addText("協作不只產出成功，也共同理解失敗——成功與失敗，都是我們三層一起讀懂的。", { x: 0.6, y: 5.9, w: 12.15, h: 0.6, fontFace: HF, fontSize: 17, italic: true, color: NAVY, align: "center", margin: 0 });
+codeRef(s, "8/50 低分歸因 docs/evolution_design_notes.md §12.7(b) · diff_based_evolution:false（full-rewrite）見 openevolve_config.yaml:18");
 
 // ============================================================ 23 什麼該誰做
 s = p.addSlide();
@@ -457,6 +484,7 @@ who.forEach((c, i) => {
   s.addText(c[1], { x: x + 0.22, y: 3.4, w: 3.45, h: 1.6, fontFace: BF, fontSize: 15, color: INK, lineSpacing: 24, margin: 0 });
 });
 s.addText("我用三條判準分工：可逆性 · 是否需要價值判斷 · 搜尋空間大小。", { x: 0.6, y: 5.6, w: 12, h: 0.6, fontFace: HF, fontSize: 17, bold: true, color: NAVY, align: "center", margin: 0 });
+codeRef(s, "對應檔案：我→config/*.yaml ｜ Claude→src/ + tests/ ｜ 進化→EVOLVE-BLOCK（agents_evolving.yaml / evolvable_tools.py）");
 
 // ============================================================ 24 Key Takeaways
 s = p.addSlide();
@@ -468,12 +496,13 @@ const tk = [
   "好問題驅動好設計；連失敗都能共同理解",
 ];
 tk.forEach((t, i) => {
-  const y = 2.0 + i * 1.15;
-  card(s, 0.6, y, 12.15, 1.0);
-  chip(s, 0.9, y + 0.25, `${i + 1}`, AMBER, NAVY);
-  s.addText(t, { x: 1.6, y, w: 11.0, h: 1.0, fontFace: BF, fontSize: 16.5, color: INK, valign: "middle", margin: 0 });
+  const y = 2.0 + i * 1.1;
+  card(s, 0.6, y, 12.15, 0.95);
+  chip(s, 0.9, y + 0.22, `${i + 1}`, AMBER, NAVY);
+  s.addText(t, { x: 1.6, y, w: 11.0, h: 0.95, fontFace: BF, fontSize: 16.5, color: INK, valign: "middle", margin: 0 });
 });
-s.addText("💬 回到開場：你的 AI 是工具，還是夥伴？", { x: 0.6, y: 6.75, w: 12, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
+s.addText("💬 回到開場：你的 AI 是工具，還是夥伴？", { x: 0.6, y: 6.6, w: 12, h: 0.35, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
+codeRef(s, "原則出處 docs/evolution_design_notes.md §3（分類學）· §4（協議/策略分離）· §12.7（數據）");
 
 // ============================================================ 25 結語 + 資源
 s = p.addSlide();
@@ -481,7 +510,6 @@ s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("謝謝 · Q & A", { x: 0.95, y: 1.9, w: 11.5, h: 1, fontFace: HF, fontSize: 42, bold: true, color: WHITE, margin: 0 });
 s.addText("這個專案的真正產物，不只是 0.842 的 agent——\n而是我帶走的一套「人 + AI + 進化」安全協作工作流。", { x: 1, y: 3.2, w: 11.5, h: 1.4, fontFace: HF, fontSize: 21, italic: true, color: ICE, lineSpacing: 34, margin: 0 });
-// mini chain再現
 chain.forEach((c, i) => {
   const x = 1.0 + i * 3.5;
   s.addShape(p.shapes.ROUNDED_RECTANGLE, { x, y: 5.0, w: 2.6, h: 0.7, rectRadius: 0.08, fill: { color: c[1] } });
@@ -492,5 +520,6 @@ s.addText([
   { text: "資源　", options: { bold: true, color: AMBER } },
   { text: "docs/collaboration_workflow_outline.md · docs/evolution_design_notes.md · docs/teaching_slides_outline.md", options: { color: ICE } },
 ], { x: 1, y: 6.3, w: 11.5, h: 0.6, fontFace: BF, fontSize: 13.5, margin: 0 });
+codeRef(s, "兩份大綱 docs/collaboration_workflow_outline.md · docs/teaching_slides_outline.md ｜ 技術 docs/evolution_design_notes.md", true);
 
 p.writeFile({ fileName: "/tmp/deck/三層協作工作流_教學投影片.pptx" }).then(f => console.log("WROTE", f));
