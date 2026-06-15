@@ -30,11 +30,90 @@ function chip(s, x, y, txt, fill, tcolor) {
 function arrow(s, x, y, w, color) {
   s.addText("→", { x, y, w: w || 0.55, h: 0.8, fontFace: HF, fontSize: 28, bold: true, color: color || AMBER, align: "center", valign: "middle", margin: 0 });
 }
+// 每個 footer 裡的「檔名:行號」自動變成可點的 GitHub permalink（pin 到 commit SHA，
+// 行號不會隨日後改碼漂移）。footer 字串不必改——靠已知檔名清單自動偵測。
+const GH_BASE = "https://github.com/yuchieh/AgentSocietyChallenge_OpenEvolve/blob/facfd59aceddfe0ce7f7499f93af16566d8002c2/";
+const PATHMAP = {
+  "openevolve_evaluator.py": "openevolve_evaluator.py",
+  "evaluator.py": "openevolve_evaluator.py",
+  "evolvable_tools.py": "evolvable_tools.py",
+  "CLAUDE.md": "CLAUDE.md",
+  "src/tools/interaction_tool_wrapper.py": "src/tools/interaction_tool_wrapper.py",
+  "interaction_tool_wrapper.py": "src/tools/interaction_tool_wrapper.py",
+  "src/tools/retrieval_executor.py": "src/tools/retrieval_executor.py",
+  "retrieval_executor.py": "src/tools/retrieval_executor.py",
+  "src/tools/tool_loader.py": "src/tools/tool_loader.py",
+  "tool_loader.py": "src/tools/tool_loader.py",
+  "src/crews/simulation_crew.py": "src/crews/simulation_crew.py",
+  "simulation_crew.py": "src/crews/simulation_crew.py",
+  "src/flows/serving_flow.py": "src/flows/serving_flow.py",
+  "serving_flow.py": "src/flows/serving_flow.py",
+  "src/utils/create_sampled_dataset.py": "src/utils/create_sampled_dataset.py",
+  "create_sampled_dataset.py": "src/utils/create_sampled_dataset.py",
+  "scripts/validate_holdout.py": "scripts/validate_holdout.py",
+  "validate_holdout.py": "scripts/validate_holdout.py",
+  "tests/test_tool_loader.py": "tests/test_tool_loader.py",
+  "test_tool_loader.py": "tests/test_tool_loader.py",
+  "tests/test_retrieval_executor.py": "tests/test_retrieval_executor.py",
+  "test_retrieval_executor.py": "tests/test_retrieval_executor.py",
+  "config/openevolve_config.yaml": "config/openevolve_config.yaml",
+  "openevolve_config.yaml": "config/openevolve_config.yaml",
+  "config/agents_evolving.yaml": "config/agents_evolving.yaml",
+  "agents_evolving.yaml": "config/agents_evolving.yaml",
+  "config/agents.yaml": "config/agents.yaml",
+  "agents.yaml": "config/agents.yaml",
+  "config/tasks.yaml": "config/tasks.yaml",
+  "tasks.yaml": "config/tasks.yaml",
+  "docs/evolution_design_notes.md": "docs/evolution_design_notes.md",
+  "evolution_design_notes.md": "docs/evolution_design_notes.md",
+  "docs/collaboration_workflow_outline.md": "docs/collaboration_workflow_outline.md",
+  "collaboration_workflow_outline.md": "docs/collaboration_workflow_outline.md",
+  "docs/teaching_slides_outline.md": "docs/teaching_slides_outline.md",
+  "teaching_slides_outline.md": "docs/teaching_slides_outline.md",
+  "docs/unified_deck_outline.md": "docs/unified_deck_outline.md",
+  "unified_deck_outline.md": "docs/unified_deck_outline.md",
+};
+const _NAMES = Object.keys(PATHMAP).sort((a, b) => b.length - a.length);
+const _esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// 接續的 :行號 只在「冒號前不是文字字元」時才算（讓「num_islands:3」這種設定值不被誤判成行號）
+const _REF_RE = new RegExp("(" + _NAMES.map(_esc).join("|") + ")(:\\d+(?:-\\d+)?)?|(?<![\\w]):(\\d+(?:-\\d+)?)", "g");
+
+function _ghUrl(path, lines) {
+  let url = GH_BASE + path;
+  if (lines) { const [a, b] = lines.split("-"); url += "#L" + a + (b ? "-L" + b : ""); }
+  return url;
+}
+// 把 footer 字串拆成 [{text} | {text, url}] runs
+function _linkify(txt) {
+  const runs = [];
+  let last = 0, lastPath = null, m;
+  _REF_RE.lastIndex = 0;
+  while ((m = _REF_RE.exec(txt)) !== null) {
+    if (m.index > last) runs.push({ text: txt.slice(last, m.index) });
+    if (m[1]) {                                   // 檔名(:行號)
+      lastPath = PATHMAP[m[1]];
+      runs.push({ text: m[0], url: _ghUrl(lastPath, m[2] ? m[2].slice(1) : null) });
+    } else if (m[3] && lastPath) {                // 接續的 :行號（沿用前一個檔案）
+      runs.push({ text: m[0], url: _ghUrl(lastPath, m[3]) });
+    } else {
+      runs.push({ text: m[0] });
+    }
+    last = _REF_RE.lastIndex;
+  }
+  if (last < txt.length) runs.push({ text: txt.slice(last) });
+  return runs;
+}
+
 function codeRef(s, txt, dark) {
-  s.addText([
-    { text: "‹code›  ", options: { fontFace: CF, color: AMBER, bold: true } },
-    { text: txt, options: { fontFace: CF, color: dark ? "8FA3C8" : MUTE } },
-  ], { x: 0.55, y: 7.2, w: 12.4, h: 0.22, fontSize: 9, valign: "middle", margin: 0 });
+  const linkCol = dark ? ICE : BLUE;
+  const plainCol = dark ? "8FA3C8" : MUTE;
+  const runs = [{ text: "‹code›  ", options: { fontFace: CF, color: AMBER, bold: true } }];
+  for (const r of _linkify(txt)) {
+    runs.push(r.url
+      ? { text: r.text, options: { fontFace: CF, color: linkCol, underline: { style: "sng" }, hyperlink: { url: r.url } } }
+      : { text: r.text, options: { fontFace: CF, color: plainCol } });
+  }
+  s.addText(runs, { x: 0.55, y: 7.2, w: 12.4, h: 0.22, fontSize: 9, valign: "middle", margin: 0 });
 }
 const chain = [["我", HUMAN], ["Claude", CLAUDE], ["OpenEvolve", OE]];
 
