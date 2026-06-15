@@ -633,6 +633,34 @@ s.addText([
 ], { x: 0.95, y: 5.75, w: 11.5, h: 1.3, fontFace: BF, fontSize: 14, valign: "middle", lineSpacing: 21, margin: 0 });
 codeRef(s, "島/遷移 config/openevolve_config.yaml:71-78（num_islands:3, migration）");
 
+// ============================================================ S23b 怎麼跳出局部最優
+s = p.addSlide();
+header(s, "Part 6 · 高潮", "那要怎麼跳出局部最優？");
+s.addText("跳出不是「再多跑幾代」（那只會把公式越加越複雜）——而是同時動三個旋鈕：", { x: 0.6, y: 1.62, w: 12.15, h: 0.4, fontFace: BF, fontSize: 13.5, color: BLUE, margin: 0 });
+const fixes = [
+  ["①", "加大 TASKS", "對治：fitness 訊號太弱", "每次 evaluate 用更多 task、擴大 train 樣本（資料源有 198 筆，目前只用 5）"],
+  ["②", "島嶼種子多樣化", "對治：三島趨同", "不同設計哲學各 seed 一島；migration_interval 調長、migration_rate 調低"],
+  ["③", "啟動工具進化", "對治：搜尋空間用盡", "讓 evolvable_tools.py 真正進化（＋ n_tools 維度）——給搜尋空間新原料"],
+];
+fixes.forEach((f, i) => {
+  const x = 0.6 + i * 4.18;
+  card(s, x, 2.15, 3.85, 3.1);
+  s.addShape(p.shapes.RECTANGLE, { x, y: 2.15, w: 3.85, h: 0.12, fill: { color: NAVY } });
+  chip(s, x + 0.22, y_b(2.4), f[0], AMBER, NAVY);
+  s.addText(f[1], { x: x + 0.85, y: 2.42, w: 2.85, h: 0.5, fontFace: HF, fontSize: 16, bold: true, color: NAVY, valign: "middle", margin: 0 });
+  s.addText(f[2], { x: x + 0.25, y: 3.05, w: 3.4, h: 0.4, fontFace: BF, fontSize: 12.5, italic: true, color: RED, margin: 0 });
+  s.addText(f[3], { x: x + 0.25, y: 3.55, w: 3.4, h: 1.5, fontFace: BF, fontSize: 13.5, color: INK, lineSpacing: 20, margin: 0 });
+  s.addText("狀態：待辦", { x: x + 0.25, y: 4.85, w: 3.4, h: 0.3, fontFace: CF, fontSize: 11, color: MUTE, margin: 0 });
+});
+function y_b(v){return v;}
+card(s, 0.6, 5.5, 12.15, 1.4, NAVY);
+s.addText([
+  { text: "配套（已就緒）：", options: { bold: true, color: AMBER } },
+  { text: "holdout 照妖鏡確認進步是真泛化、MAP-Elites 把 review_generation 當維度保護文字品質。", options: { color: WHITE } },
+  { text: "　前兩條治「卡在原地」，第三條給「新方向」。", options: { color: ICE } },
+], { x: 0.95, y: 5.5, w: 11.5, h: 1.4, fontFace: BF, fontSize: 13.5, valign: "middle", lineSpacing: 21, margin: 0 });
+codeRef(s, "加 task openevolve_evaluator.py:115 · 島/遷移 openevolve_config.yaml:71-78 · 工具進化 evolvable_tools.py:18-58");
+
 // ============================================================ S24 失敗洞察
 s = p.addSlide();
 header(s, "Part 6 · 高潮", "連「失敗」也是協作的洞察");
