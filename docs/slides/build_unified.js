@@ -348,18 +348,19 @@ card(s, 0.6, 2.12, 4.5, 4.2, "EAF0FA");
 s.addText("我問的好問題", { x: 0.85, y: 2.3, w: 4.0, h: 0.4, fontFace: HF, fontSize: 15, bold: true, color: HUMAN, margin: 0 });
 s.addText("「怎麼讓 agent 安全進化、用不同工具、甚至創造新工具，而不在工具呼叫上崩潰？」", { x: 0.85, y: 2.78, w: 4.0, h: 2.4, fontFace: HF, fontSize: 17, italic: true, color: NAVY, lineSpacing: 28, margin: 0 });
 s.addText("不是「幫我修 bug」，而是往深處逼的設計問題。", { x: 0.85, y: 5.55, w: 4.0, h: 0.7, fontFace: BF, fontSize: 12.5, color: MUTE, margin: 0 });
+// 註：這 5 條是「失效模式」（哪裡會壞），用 ①–⑤ 編號；別跟後面三道防線 L0/L1/L2 混淆
 const tax = [
-  ["L1", "呼叫協議", "呼叫工具的文字格式被改壞", RED],
-  ["L2", "參數正確性", "參數（query_type）亂填", AMBER],
-  ["L3", "呼叫策略", "「不查了，直接猜」", AMBER],
-  ["L4", "結果消化", "上千筆 review 不知怎麼取樣", BLUE],
-  ["L5", "下游契約", "傳給下一棒的摘要爛掉", BLUE],
+  ["①", "呼叫協議", "呼叫工具的文字格式被改壞", RED],
+  ["②", "參數正確性", "參數（query_type）亂填", AMBER],
+  ["③", "呼叫策略", "「不查了，直接猜」", AMBER],
+  ["④", "結果消化", "上千筆 review 不知怎麼取樣", BLUE],
+  ["⑤", "下游契約", "傳給下一棒的摘要爛掉", BLUE],
 ];
 tax.forEach((t, i) => {
   const y = 2.12 + i * 0.72;
   card(s, 5.3, y, 7.45, 0.62);
   s.addShape(p.shapes.RECTANGLE, { x: 5.3, y, w: 0.1, h: 0.62, fill: { color: t[3] } });
-  s.addText(t[0], { x: 5.5, y, w: 0.8, h: 0.62, fontFace: CF, fontSize: 15, bold: true, color: t[3], valign: "middle", margin: 0 });
+  s.addText(t[0], { x: 5.5, y, w: 0.8, h: 0.62, fontFace: HF, fontSize: 17, bold: true, color: t[3], valign: "middle", align: "center", margin: 0 });
   s.addText(t[1], { x: 6.3, y, w: 2.2, h: 0.62, fontFace: HF, fontSize: 13.5, bold: true, color: NAVY, valign: "middle", margin: 0 });
   s.addText(t[2], { x: 8.55, y, w: 4.05, h: 0.62, fontFace: BF, fontSize: 12, color: INK, valign: "middle", margin: 0 });
 });
