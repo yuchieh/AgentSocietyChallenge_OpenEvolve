@@ -92,7 +92,13 @@ function _linkify(txt) {
     if (m.index > last) runs.push({ text: txt.slice(last, m.index) });
     if (m[1]) {                                   // 檔名(:行號)
       lastPath = PATHMAP[m[1]];
-      runs.push({ text: m[0], url: _ghUrl(lastPath, m[2] ? m[2].slice(1) : null) });
+      const lines = m[2] ? m[2].slice(1) : null;
+      // .md（設計文件）沒有指定行數就不連結——連到整份長文件意義不大
+      if (lastPath.endsWith(".md") && !lines) {
+        runs.push({ text: m[0] });
+      } else {
+        runs.push({ text: m[0], url: _ghUrl(lastPath, lines) });
+      }
     } else if (m[3] && lastPath) {                // 接續的 :行號（沿用前一個檔案）
       runs.push({ text: m[0], url: _ghUrl(lastPath, m[3]) });
     } else {
@@ -317,26 +323,30 @@ codeRef(s, "openevolve_evaluator.py:133-137 timeout fallback · :179-184 excepti
 // ============================================================ S10 接縫：好問題 → 失敗分類學
 s = p.addSlide();
 header(s, "Part 2 · 接縫", "協作模式 ①：Claude 的「失敗分類學」");
-card(s, 0.6, 1.9, 4.5, 4.55, "EAF0FA");
-s.addText("我問的好問題", { x: 0.85, y: 2.1, w: 4.0, h: 0.4, fontFace: HF, fontSize: 15, bold: true, color: HUMAN, margin: 0 });
-s.addText("「怎麼讓 agent 安全進化、用不同工具、甚至創造新工具，而不在 tool calling 上崩潰？」", { x: 0.85, y: 2.6, w: 4.0, h: 2.4, fontFace: HF, fontSize: 17, italic: true, color: NAVY, lineSpacing: 28, margin: 0 });
-s.addText("不是「幫我修 bug」，而是往深處逼的設計問題。", { x: 0.85, y: 5.5, w: 4.0, h: 0.8, fontFace: BF, fontSize: 12.5, color: MUTE, margin: 0 });
+s.addText([
+  { text: "「失敗分類學」＝", options: { bold: true, color: NAVY } },
+  { text: "與其工具一壞就頭痛醫頭，Claude 先把「工具呼叫會怎麼壞」分門別類成 5 種失敗模式，每一層各配一種防護。", options: { color: INK } },
+], { x: 0.6, y: 1.62, w: 12.15, h: 0.4, fontFace: BF, fontSize: 13.5, margin: 0 });
+card(s, 0.6, 2.12, 4.5, 4.2, "EAF0FA");
+s.addText("我問的好問題", { x: 0.85, y: 2.3, w: 4.0, h: 0.4, fontFace: HF, fontSize: 15, bold: true, color: HUMAN, margin: 0 });
+s.addText("「怎麼讓 agent 安全進化、用不同工具、甚至創造新工具，而不在工具呼叫上崩潰？」", { x: 0.85, y: 2.78, w: 4.0, h: 2.4, fontFace: HF, fontSize: 17, italic: true, color: NAVY, lineSpacing: 28, margin: 0 });
+s.addText("不是「幫我修 bug」，而是往深處逼的設計問題。", { x: 0.85, y: 5.55, w: 4.0, h: 0.7, fontFace: BF, fontSize: 12.5, color: MUTE, margin: 0 });
 const tax = [
-  ["L1", "呼叫協議", "ReAct 格式被改壞", RED],
-  ["L2", "參數正確性", "query_type 亂掰", AMBER],
+  ["L1", "呼叫協議", "呼叫工具的文字格式被改壞", RED],
+  ["L2", "參數正確性", "參數（query_type）亂填", AMBER],
   ["L3", "呼叫策略", "「不查了，直接猜」", AMBER],
-  ["L4", "結果消化", "上千筆 review 怎麼取樣", BLUE],
-  ["L5", "下游契約", "summary 結構爛掉", BLUE],
+  ["L4", "結果消化", "上千筆 review 不知怎麼取樣", BLUE],
+  ["L5", "下游契約", "傳給下一棒的摘要爛掉", BLUE],
 ];
 tax.forEach((t, i) => {
-  const y = 1.9 + i * 0.78;
-  card(s, 5.3, y, 7.45, 0.66);
-  s.addShape(p.shapes.RECTANGLE, { x: 5.3, y, w: 0.1, h: 0.66, fill: { color: t[3] } });
-  s.addText(t[0], { x: 5.5, y, w: 0.8, h: 0.66, fontFace: CF, fontSize: 16, bold: true, color: t[3], valign: "middle", margin: 0 });
-  s.addText(t[1], { x: 6.35, y, w: 2.4, h: 0.66, fontFace: HF, fontSize: 14, bold: true, color: NAVY, valign: "middle", margin: 0 });
-  s.addText(t[2], { x: 8.8, y, w: 3.8, h: 0.66, fontFace: BF, fontSize: 12.5, color: INK, valign: "middle", margin: 0 });
+  const y = 2.12 + i * 0.72;
+  card(s, 5.3, y, 7.45, 0.62);
+  s.addShape(p.shapes.RECTANGLE, { x: 5.3, y, w: 0.1, h: 0.62, fill: { color: t[3] } });
+  s.addText(t[0], { x: 5.5, y, w: 0.8, h: 0.62, fontFace: CF, fontSize: 15, bold: true, color: t[3], valign: "middle", margin: 0 });
+  s.addText(t[1], { x: 6.3, y, w: 2.2, h: 0.62, fontFace: HF, fontSize: 13.5, bold: true, color: NAVY, valign: "middle", margin: 0 });
+  s.addText(t[2], { x: 8.55, y, w: 4.05, h: 0.62, fontFace: BF, fontSize: 12, color: INK, valign: "middle", margin: 0 });
 });
-s.addText("Claude 沒直接 try/except，而是先把「工具呼叫會怎麼壞」拆成 5 層——這套分法就叫「失敗分類學」。金句：fitness 只告訴你「壞了」，不告訴你「哪裡壞了」。", { x: 5.3, y: 5.9, w: 7.45, h: 0.75, fontFace: BF, fontSize: 11.5, italic: true, color: BLUE, lineSpacing: 16, margin: 0 });
+s.addText("好處：進化改壞其中任何一層，最壞只是退化、不是整個崩潰。關鍵洞察——fitness 只告訴你「壞了」，不告訴你「哪裡壞了」；分層才能對症下藥。", { x: 5.3, y: 5.78, w: 7.45, h: 0.75, fontFace: BF, fontSize: 11.5, italic: true, color: BLUE, lineSpacing: 16, margin: 0 });
 codeRef(s, "5 層分類學 docs/evolution_design_notes.md §3 ｜ 落地 src/tools/{interaction_tool_wrapper,retrieval_executor,tool_loader}.py");
 
 // ============================================================ S11 協議/策略分離
