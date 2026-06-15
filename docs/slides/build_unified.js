@@ -156,7 +156,6 @@ stats.forEach((t, i) => {
   s.addText(t[2], { x: x + 0.25, y: 4.0, w: 3.4, h: 1.0, fontFace: BF, fontSize: 13.5, color: INK, lineSpacing: 20, margin: 0 });
 });
 s.addText("而且這不是一個人寫出來的——是「我 + Claude + OpenEvolve」三個智能體協作的成果。", { x: 0.6, y: 5.6, w: 12, h: 0.6, fontFace: HF, fontSize: 17, italic: true, color: NAVY, align: "center", margin: 0 });
-codeRef(s, "完整數據 docs/evolution_design_notes.md §12.7（完整架構 50-iter 端到端）");
 
 // ============================================================ S3 AGENDA
 s = p.addSlide();
@@ -181,7 +180,6 @@ s.addText([
   { text: "三層協作架構 + 自主/護欄配置 · 看懂失敗分類學與 L0/L1/L2 · 帶走 5 個協作模式 · 判準：什麼我做/交給 AI/交給進化", options: { color: INK } },
 ], { x: 0.55, y: 5.2, w: 12.2, h: 0.8, fontFace: BF, fontSize: 13, valign: "middle", margin: 0 });
 s.addText("主線：協作故事是外層，技術分類學是嵌入其中的實戰案例。", { x: 0.55, y: 6.15, w: 12, h: 0.4, fontFace: BF, fontSize: 13, italic: true, color: BLUE, margin: 0 });
-codeRef(s, "外層 docs/collaboration_workflow_outline.md ｜ 內層 docs/teaching_slides_outline.md ｜ 數據 evolution_design_notes.md");
 
 // ============================================================ S4 三個角色
 s = p.addSlide();
@@ -347,7 +345,7 @@ tax.forEach((t, i) => {
   s.addText(t[2], { x: 8.55, y, w: 4.05, h: 0.62, fontFace: BF, fontSize: 12, color: INK, valign: "middle", margin: 0 });
 });
 s.addText("好處：進化改壞其中任何一層，最壞只是退化、不是整個崩潰。關鍵洞察——fitness 只告訴你「壞了」，不告訴你「哪裡壞了」；分層才能對症下藥。", { x: 5.3, y: 5.78, w: 7.45, h: 0.75, fontFace: BF, fontSize: 11.5, italic: true, color: BLUE, lineSpacing: 16, margin: 0 });
-codeRef(s, "5 層分類學 docs/evolution_design_notes.md §3 ｜ 落地 src/tools/{interaction_tool_wrapper,retrieval_executor,tool_loader}.py");
+codeRef(s, "落地 src/tools/{interaction_tool_wrapper,retrieval_executor,tool_loader}.py");
 
 // ============================================================ S11 協議/策略分離
 s = p.addSlide();
@@ -555,7 +553,6 @@ s.addText([
   { text: "解釋 caffeinate、幫我設定（防睡眠但讓螢幕休息）（工具細節）", options: { color: INK } },
 ], { x: 7.1, y: 2.95, w: 5.4, h: 2.8, fontSize: 14, lineSpacing: 24, margin: 0 });
 s.addText("兩種知識互補，缺一進化就跑不完。", { x: 0.6, y: 6.25, w: 12, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: NAVY, align: "center", margin: 0 });
-codeRef(s, "原則 CLAUDE.md Git 工作流程 ｜ 完整 50-iter 怎麼跑完 docs/evolution_design_notes.md §12.7(b)（nohup + caffeinate）");
 
 // ============================================================ S20 ⑤ 分層委派
 s = p.addSlide();
@@ -568,7 +565,7 @@ card(s, 6.8, 2.9, 5.95, 2.9, "E7F2EC");
 s.addText("完整架構", { x: 7.1, y: 3.15, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: GREEN, margin: 0 });
 s.addText([{ text: "0", options: { fontFace: HF, fontSize: 52, bold: true, color: GREEN, breakLine: true } }, { text: "次工具呼叫崩潰", options: { color: INK } }], { x: 7.1, y: 3.7, w: 5.4, h: 1.8, lineSpacing: 36, margin: 0 });
 s.addText("我委派自主性的前提，是先建好「最壞只是退化」的護欄。", { x: 0.6, y: 6.1, w: 12.15, h: 0.5, fontFace: HF, fontSize: 18, bold: true, italic: true, color: NAVY, align: "center", margin: 0 });
-codeRef(s, "三層護欄 interaction_tool_wrapper.py(L0) · retrieval_executor.py(L1) · tool_loader.py(L2) ｜ 數據 §12.7");
+codeRef(s, "三層護欄 interaction_tool_wrapper.py(L0) · retrieval_executor.py(L1) · tool_loader.py(L2)");
 
 // ============================================================ S21 五模式總表
 s = p.addSlide();
@@ -588,7 +585,6 @@ pat.forEach((r, i) => {
   s.addText(r[2], { x: 5.3, y, w: 7.3, h: 0.84, fontFace: BF, fontSize: 14.5, color: INK, valign: "middle", margin: 0 });
 });
 s.addText("💬 哪一個模式，你明天就能用在自己的專案？", { x: 0.6, y: 6.78, w: 12, h: 0.3, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
-codeRef(s, "五模式完整版 docs/collaboration_workflow_outline.md（Part 3）");
 
 // ============================================================ S22 三層產物 + formula
 s = p.addSlide();
@@ -612,7 +608,7 @@ s.addText([
   { text: "elif < 1.0: +0.45·…   elif < 1.3: +0.30·…   else: user_median + 0.20·…", options: { color: ICE, breakLine: true } },
   { text: "clamp [1,5] · round 0.5", options: { color: WHITE } },
 ], { x: 0.9, y: 5.2, w: 11.5, h: 1.3, fontFace: CF, fontSize: 13, lineSpacing: 22, margin: 0 });
-codeRef(s, "進化目標檔 config/agents_evolving.yaml EVOLVE-BLOCK · iter22 數據 docs/evolution_design_notes.md §12.7(b)");
+codeRef(s, "進化目標檔 config/agents_evolving.yaml EVOLVE-BLOCK");
 
 // ============================================================ S23 iter22 之後
 s = p.addSlide();
@@ -635,7 +631,7 @@ s.addText([
   { text: "Claude 給我的診斷：", options: { bold: true, color: AMBER } },
   { text: "iter22 是局部最優。OpenEvolve 能「找到」它，但「為什麼停在這、怎麼跳出去」是探勘者結構上做不到的——它沒有「局部最優」這個概念。", options: { color: WHITE } },
 ], { x: 0.95, y: 5.75, w: 11.5, h: 1.3, fontFace: BF, fontSize: 14, valign: "middle", lineSpacing: 21, margin: 0 });
-codeRef(s, "島/遷移 config/openevolve_config.yaml:71-78（num_islands:3, migration）· 數據 design notes §12.7(b)");
+codeRef(s, "島/遷移 config/openevolve_config.yaml:71-78（num_islands:3, migration）");
 
 // ============================================================ S24 失敗洞察
 s = p.addSlide();
@@ -646,7 +642,7 @@ s.addText([{ text: "5 次", options: { fontFace: HF, fontSize: 44, bold: true, c
 card(s, 6.8, 3.0, 5.95, 2.4, "FBF1E0");
 s.addText([{ text: "3 次", options: { fontFace: HF, fontSize: 44, bold: true, color: "B5791F", breakLine: true } }, { text: "rate limit 429", options: { color: INK } }, { text: "（NVIDIA NIM 限流）", options: { fontSize: 12, color: MUTE } }], { x: 7.1, y: 3.3, w: 5.4, h: 1.9, lineSpacing: 30, margin: 0 });
 s.addText("協作不只產出成功，也共同理解失敗——成功與失敗，都是我們三層一起讀懂的。", { x: 0.6, y: 5.9, w: 12.15, h: 0.6, fontFace: HF, fontSize: 17, italic: true, color: NAVY, align: "center", margin: 0 });
-codeRef(s, "8/50 低分歸因 docs/evolution_design_notes.md §12.7(b) · diff_based_evolution:false 見 openevolve_config.yaml:18");
+codeRef(s, "diff_based_evolution:false（full-rewrite 風險）見 openevolve_config.yaml:18");
 
 // ============================================================ S25 什麼該誰做
 s = p.addSlide();
@@ -682,7 +678,6 @@ tk.forEach((t, i) => {
   s.addText(t, { x: 1.6, y, w: 11.0, h: 0.95, fontFace: BF, fontSize: 15.5, color: INK, valign: "middle", margin: 0 });
 });
 s.addText("💬 回到開場：你的 AI 是工具，還是夥伴？", { x: 0.6, y: 6.6, w: 12, h: 0.35, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
-codeRef(s, "原則出處 docs/evolution_design_notes.md §3 分類學 · §4 協議/策略分離 · §12.7 數據");
 
 // ============================================================ S27 結語
 s = p.addSlide();
@@ -700,6 +695,5 @@ s.addText([
   { text: "資源　", options: { bold: true, color: AMBER } },
   { text: "docs/{collaboration_workflow_outline, teaching_slides_outline, unified_deck_outline, evolution_design_notes}.md", options: { color: ICE } },
 ], { x: 1, y: 6.3, w: 11.5, h: 0.6, fontFace: BF, fontSize: 13, margin: 0 });
-codeRef(s, "技術深入 docs/evolution_design_notes.md ｜ 三份大綱皆在 docs/", true);
 
 p.writeFile({ fileName: "/tmp/deck/人AI進化_整合教學投影片.pptx" }).then(f => console.log("WROTE", f));
