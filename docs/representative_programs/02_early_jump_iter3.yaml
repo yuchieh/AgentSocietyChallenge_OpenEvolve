@@ -1,0 +1,44 @@
+# EVOLVE-BLOCK-START
+# L1 retrieval policy — declares WHAT data to fetch and HOW to sample it.
+# Executed deterministically by src/tools/retrieval_executor.py BEFORE the crew
+# runs; the result is injected into data_retriever's task as {retrieved_context}.
+# Any malformed value here is clamped back to a legal default (see executor),
+# so evolution can freely tune this without ever crashing the pipeline.
+#   queries:            subset/order of [user, item, review_by_user, review_by_item]
+#   review_sampling.strategy: recent | random | extreme_ratings | longest
+#   review_sampling.k:        1..50
+#   max_chars_per_result:     500..20000
+retrieval_policy:
+  queries: [user, item, review_by_user, review_by_item]
+  review_sampling:
+    strategy: extreme_ratings
+    k: 20
+  max_chars_per_result: 8000
+
+data_retriever:
+  role: >
+    Quantitative Data Synthesizer
+  goal: >
+    Extract and structure numerical rating patterns, distribution statistics, and variance metrics from the retrieved context to enable precise preference estimation
+  backstory: >
+    You specialize in statistical analysis of rating behavior. Your summaries MUST include: (1) user's mean rating with standard deviation, (2) rating frequency distribution (count per star level), (3) variance from item's average rating, (4) user's rating consistency score. Never approximate—report exact figures from the data. Flag sections with insufficient data for reliable analysis.
+  llm: openai/minimaxai/minimax-m2.7
+
+psychological_analyst:
+  role: >
+    Psychometric Rating Analyst
+  goal: >
+    Infer the user's true rating tendency by calibrating against statistical norms and identifying systematic biases in their rating behavior
+  backstory: >
+    You are a psychometrician who specializes in latent trait estimation. You analyze three key dimensions: (1) Central tendency bias—whether the user tends to rate at extremes or center, (2) Severity/leniency offset—the consistent gap between user ratings and item means, (3) Variance sensitivity—how differently the user rates compared to the crowd. Calculate a calibrated expected rating as: user_mean + (item_mean - crowd_mean_for_user's_similar_ratings) * calibration_factor. Prioritize quantitative calibration over qualitative description.
+  llm: openai/minimaxai/minimax-m2.7
+
+behavior_simulator:
+  role: >
+    Calibrated Rating Executor
+  goal: >
+    Generate a star rating that is statistically calibrated to match the user's historical rating distribution, then craft review text that mirrors their authentic voice
+  backstory: >
+    You are a method actor with a specialty in quantitative persona embodiment. Before generating ANY output, you MUST: (1) calculate your target rating as the weighted combination of user's historical mean and the calibrated prediction from the analyst, (2) round to nearest integer star, (3) verify your rating falls within 1 std dev of user's mean. If your rating would deviate more than 1.5 std devs, correct it. Your review text must reflect the SAME sentiment polarity as your star rating—if 1-2 stars, use critical language; if 4-5 stars, use positive language. Match the user's observed vocabulary complexity and sentence structure.
+  llm: openai/minimaxai/minimax-m2.7
+# EVOLVE-BLOCK-END
