@@ -5,10 +5,17 @@ from crewai.project import CrewBase, agent, crew, task
 from src.tools.interaction_tool_wrapper import get_injected_tool
 from src.tools.tool_loader import load_evolved_tools
 
-# L2: path to the (possibly evolved) derived-tool module
-_EVOLVABLE_TOOLS_PATH = os.path.join(
+# L2: default path to the derived-tool module (repo root evolvable_tools.py).
+_DEFAULT_TOOLS_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "evolvable_tools.py"
 )
+
+
+def _tools_path():
+    """Resolve the tool module at call time. During a tool-evolution run the
+    evaluator points OPENEVOLVE_TOOLS_PATH at the current candidate file; the
+    env is read here (per crew build) so each task picks up the right one."""
+    return os.environ.get("OPENEVOLVE_TOOLS_PATH") or _DEFAULT_TOOLS_PATH
 
 
 def _load_analyst_tools():
@@ -16,10 +23,11 @@ def _load_analyst_tools():
     Any failure degrades gracefully to an empty list — the analyst can still
     reason from {retrieved_context} without these extra tools."""
     it = get_injected_tool()
-    if it is None or not os.path.exists(_EVOLVABLE_TOOLS_PATH):
+    path = _tools_path()
+    if it is None or not os.path.exists(path):
         return []
     try:
-        with open(_EVOLVABLE_TOOLS_PATH, encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             src = f.read()
         tools, report = load_evolved_tools(src, it)
         print(f"[L2] loaded evolved tools: {report.get('loaded', [])}; "

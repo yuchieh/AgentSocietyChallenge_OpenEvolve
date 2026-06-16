@@ -1,0 +1,79 @@
+# OpenEvolve config for the TOOL-evolution run (§14).
+# Initial program : evolvable_tools.py   (the tool_* functions, one EVOLVE-BLOCK)
+# Evaluator       : openevolve_tool_evaluator.py
+# Run:
+#   uv run --env-file .env python -m openevolve.cli \
+#     evolvable_tools.py openevolve_tool_evaluator.py \
+#     --config config/openevolve_tools_config.yaml \
+#     --output config/openevolve_tools_output --iterations 10
+
+max_iterations: 10
+checkpoint_interval: 5
+log_level: "INFO"
+random_seed: 42
+
+# Python code → diff-based is OpenEvolve's native strength (clean, small patches).
+diff_based_evolution: true
+language: "python"
+max_code_length: 8000
+
+llm:
+  models:
+    - name: "minimaxai/minimax-m2.7"
+      weight: 1.0
+  api_base: "https://integrate.api.nvidia.com/v1"
+  api_key: null          # reads from OPENAI_API_KEY env variable
+  temperature: 0.8
+  max_tokens: 4096
+  timeout: 120
+  retries: 3
+  retry_delay: 30
+
+prompt:
+  system_message: |
+    You are an expert at feature engineering for a review-rating prediction system.
+    You are evolving the `tool_*` functions inside the EVOLVE-BLOCK of evolvable_tools.py.
+    Each tool computes a DERIVED analysis over a fixed dataset and returns a short text
+    string that the psychological_analyst agent reads to make a better rating prediction.
+
+    HARD CONTRACT (a frozen loader enforces this — violating it gets the tool silently dropped):
+    - Each tool's name MUST start with `tool_`.
+    - Signature MUST be exactly (kit, user_id, item_id).
+    - `kit` is a read-only facade exposing ONLY: kit.get_user(user_id),
+      kit.get_item(item_id), kit.get_reviews(user_id=...), kit.get_reviews(item_id=...).
+      A review dict has keys like "stars", "text", "item_id", "date".
+    - The function MUST return a short, non-empty str (<= 4000 chars). Never print.
+    - Allowed imports ONLY: statistics, math, json, re, collections, datetime,
+      itertools, functools. (os/sys/open/exec/etc. are blocked.)
+    - The docstring is the tool's advertisement shown to the agent — describe clearly
+      WHEN and WHY the tool helps, or the agent won't call it and it will be selected out.
+
+    Your goal: invent or refine derived-analysis tools that help the agent predict the
+    user's star rating more accurately and match their review tone. Ideas: rating
+    distribution shape, recency-weighted averages, category/price affinity, deviation
+    from item's crowd mean, sentiment cues from review text, etc.
+
+    Keep the EVOLVE-BLOCK-START / EVOLVE-BLOCK-END markers. Return valid Python only.
+
+  num_top_programs: 3
+  num_diverse_programs: 2
+  include_artifacts: true
+
+database:
+  population_size: 40
+  archive_size: 20
+  num_islands: 3
+  elite_selection_ratio: 0.2
+  exploitation_ratio: 0.7
+  migration_interval: 10
+  migration_rate: 0.1
+  feature_dimensions:
+    - "preference_estimation"   # rating accuracy (1 - normalized star MAE)
+    - "review_generation"       # review text fidelity
+  feature_bins: 8
+
+evaluator:
+  timeout: 900
+  max_retries: 2
+  parallel_evaluations: 1
+  cascade_evaluation: false

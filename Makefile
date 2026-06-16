@@ -9,6 +9,7 @@
 ITERS ?= 10
 TASKS ?= 5
 OUTPUT ?= config/openevolve_output
+TOOLS_OUTPUT ?= config/openevolve_tools_output
 
 # ============================================================================
 # 環境
@@ -63,6 +64,21 @@ evolve-resume:  ## 從最新 checkpoint 繼續（指定 CHECKPOINT=path）
 .PHONY: evolve-test
 evolve-test:  ## 本地整合測試 evaluator（不啟動進化）
 	uv run --env-file .env python openevolve_evaluator.py
+
+.PHONY: evolve-tools
+evolve-tools:  ## 進化 L2 工具（evolvable_tools.py；prompt 固定，可調 ITERS=N TASKS=N）
+	OPENEVOLVE_NUM_TASKS=$(TASKS) \
+	uv run --env-file .env python -m openevolve.cli \
+	    evolvable_tools.py \
+	    openevolve_tool_evaluator.py \
+	    --config config/openevolve_tools_config.yaml \
+	    --output $(TOOLS_OUTPUT) \
+	    --iterations $(ITERS)
+
+.PHONY: promote-tools
+promote-tools:  ## 取工具 run 的最佳個體，holdout 驗證通過才寫回 evolvable_tools.py（可帶 TASKS=N）
+	OPENEVOLVE_NUM_TASKS=$(TASKS) \
+	uv run --env-file .env python scripts/promote_tools.py $(PROMOTE_ARGS)
 
 .PHONY: validate-holdout
 validate-holdout:  ## 用 holdout 集驗證一份 agents YAML（偵測過擬合，可帶 YAML=path）
