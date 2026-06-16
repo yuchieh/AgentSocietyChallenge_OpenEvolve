@@ -193,22 +193,23 @@ codeRef(s, "openevolve_evaluator.py:133-137 timeout fallback · :179-184 excepti
 // ============================================================ 8 TAXONOMY (core)
 s = p.addSlide();
 header(s, "Part 2 · 事故", "Tool Calling Failure Taxonomy");
+// 註：這 5 條是「失效模式」（哪裡會壞），用 ①–⑤ 編號；別跟解法的三道防線 L0/L1/L2 混淆
 const tax = [
-  ["L1", "呼叫協議", "ReAct 格式被改壞 → parser 抓不到", RED],
-  ["L2", "參數正確性", "query_type 亂掰", AMBER],
-  ["L3", "呼叫策略", "「不查了，直接猜」", AMBER],
-  ["L4", "結果消化", "上千筆 review 怎麼取樣", BLUE],
-  ["L5", "下游契約", "summary 結構爛掉", BLUE],
+  ["①", "呼叫協議", "ReAct 格式被改壞 → parser 抓不到", RED],
+  ["②", "參數正確性", "query_type 亂掰", AMBER],
+  ["③", "呼叫策略", "「不查了，直接猜」", AMBER],
+  ["④", "結果消化", "上千筆 review 怎麼取樣", BLUE],
+  ["⑤", "下游契約", "summary 結構爛掉", BLUE],
 ];
 tax.forEach((t, i) => {
   const y = 1.85 + i * 1.0;
   card(s, 0.6, y, 12.15, 0.86);
   s.addShape(p.shapes.RECTANGLE, { x: 0.6, y, w: 0.12, h: 0.86, fill: { color: t[3] } });
-  s.addText(t[0], { x: 0.9, y, w: 1.0, h: 0.86, fontFace: CF, fontSize: 22, bold: true, color: t[3], valign: "middle", margin: 0 });
+  s.addText(t[0], { x: 0.9, y, w: 1.0, h: 0.86, fontFace: HF, fontSize: 24, bold: true, color: t[3], align: "center", valign: "middle", margin: 0 });
   s.addText(t[1], { x: 2.0, y, w: 2.6, h: 0.86, fontFace: HF, fontSize: 16, bold: true, color: NAVY, valign: "middle", margin: 0 });
   s.addText(t[2], { x: 4.7, y, w: 8.0, h: 0.86, fontFace: BF, fontSize: 14, color: INK, valign: "middle", margin: 0 });
 });
-s.addText("原本只有 L1 有防護（tasks.yaml 凍結），L2–L5 全裸露 — 這張是全場骨架", { x: 0.6, y: 6.8, w: 12, h: 0.3, fontFace: BF, fontSize: 12.5, italic: true, color: MUTE, margin: 0 });
+s.addText("原本只有①有防護（tasks.yaml 凍結），②–⑤全裸露 — 這張是全場骨架（之後的解法用 L0/L1/L2，別跟這 5 層混淆）", { x: 0.6, y: 6.8, w: 12, h: 0.3, fontFace: BF, fontSize: 12.5, italic: true, color: MUTE, margin: 0 });
 codeRef(s, "docs/evolution_design_notes.md §3（5 層分類表）· 防護落地：interaction_tool_wrapper.py · retrieval_executor.py · tool_loader.py");
 
 // ============================================================ 9 INSIGHT (quote)
