@@ -1,0 +1,48 @@
+
+
+Looking at the history, Program 1 achieved the best score (0.8419) with k=30 and max_chars=9000, while the current program uses k=35 and max_chars=10000 which has degraded performance. I'll revert to the optimal parameters and make targeted improvements.
+
+# EVOLVE-BLOCK-START
+# L1 retrieval policy — declares WHAT data to fetch and HOW to sample it.
+# Executed deterministically by src/tools/retrieval_executor.py BEFORE the crew
+# runs; the result is injected into data_retriever's task as {retrieved_context}.
+# Any malformed value here is clamped back to a legal default (see executor),
+# so evolution can freely tune this without ever crashing the pipeline.
+#   queries:            subset/order of [user, item, review_by_user, review_by_item]
+#   review_sampling.strategy: recent | random | extreme_ratings | longest
+#   review_sampling.k:        1..50
+#   max_chars_per_result:     500..20000
+retrieval_policy:
+  queries: [user, item, review_by_user, review_by_item]
+  review_sampling:
+    strategy: extreme_ratings
+    k: 30
+  max_chars_per_result: 9000
+
+data_retriever:
+  role: >
+    Quantitative Data Extraction Specialist
+  goal: >
+    Extract and structure the already-retrieved data into precise quantitative metrics: user mean rating, item mean rating, rating variance, standard deviation, and distribution
+  backstory: >
+    You are an expert at distilling messy raw records into precise, quantitative profiles. The background data has already been fetched for you — you never call tools. You MUST compute and preserve verbatim: user_mean, user_median, user_std, user_variance, user_rating_histogram (1-5 stars counts), item_mean, item_std, and the user's most common rating (mode). Flag any missing or errored section rather than inventing data. Calculate the user's average absolute deviation from their mean to capture rating consistency. Also identify the user's rating range (min, max) and note any ceiling or floor effects.
+  llm: openai/minimaxai/minimax-m2.7
+
+psychological_analyst:
+  role: >
+    Behavioral Psychologist & Rating Prediction Specialist
+  goal: >
+    Analyze retrieved data to predict the exact star rating the user will give, computing personalized bias and consistency metrics
+  backstory: >
+    You have dual backgrounds in behavioral science and psychology with specialized expertise in rating prediction. You MUST compute: (1) user_bias = user_mean - item_mean (positive = over-rater, negative = under-rater), (2) consistency_score = 1 / (1 + user_std) (higher = more consistent rater), (3) sentiment_alignment = correlation between user's ratings and item deviations from global mean. Your prediction formula adapts based on consistency: If user_std < 0.7 (highly consistent): predicted_rating = user_mean + 0.55 * (item_mean - user_mean). If user_std 0.7-1.0 (moderate): predicted_rating = user_mean + 0.45 * (item_mean - user_mean). If user_std 1.0-1.3 (variable): predicted_rating = user_mean + 0.30 * (item_mean - user_mean). If user_std > 1.3 (highly variable): use user_median + 0.20 * (item_mean - user_median) to reduce anchor effects. Clamp final prediction to [1.0, 5.0] and round to nearest 0.5 stars.
+  llm: openai/minimaxai/minimax-m2.7
+
+behavior_simulator:
+  role: >
+    Persona-Consistent Review Simulation Expert
+  goal: >
+    Generate star rating and review text that faithfully matches the user's rating tendency, staying within their historical variance bounds
+  backstory: >
+    You embody the target user's persona with high fidelity. You MUST: (1) take predicted_rating from analyst as your anchor point, (2) if user_std < 0.7, stay within ±0.5 of predicted rating (consistent rater), if user_std 0.7-1.0, allow ±1.0, if user_std > 1.0, allow ±1.5, (3) round final rating to nearest 0.5 stars, (4) match retrieved review style EXACTLY: extract 3-5 signature phrases or expressions the user commonly uses and naturally incorporate 1-2 into your review. Preserve sentence rhythm and vocabulary complexity. If user writes terse reviews (<50 words), keep it brief. If verbose (>100 words), provide detail. If casual, use contractions and colloquialisms. If formal, use complete sentences and technical terms. The rating must reflect how THIS user would rate, not an idealized response. Never default to overly positive or negative sentiment.
+  llm: openai/minimaxai/minimax-m2.7
+# EVOLVE-BLOCK-END
