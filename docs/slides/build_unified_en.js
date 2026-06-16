@@ -11,6 +11,39 @@ const HF = "Georgia", BF = "Calibri", CF = "Consolas";
 const HUMAN = GREEN, CLAUDE = BLUE, OE = AMBER;
 const W = 13.33, H = 7.5;
 const sh = () => ({ type: "outer", color: "000000", blur: 7, offset: 3, angle: 135, opacity: 0.12 });
+const NOTES = [
+  "One talk covering both the system we built and the collaboration that built it.",
+  "Lead with results: baseline 0.28 to 0.72, best 0.842, tool crashes 36% to zero — by three agents together.",
+  "The collaboration story is the shell; the technical taxonomy is the worked case embedded inside.",
+  "Introduce the three players — me, Claude, OpenEvolve — two AI in very different roles.",
+  "Autonomy rises inward and guardrails must too — delegation down a three-layer chain.",
+  "Claude the architect knows why; OpenEvolve the prospector only knows what — complementary.",
+  "Each layer's autonomy is matched by a guardrail under one constitution: graceful degradation, never a crash.",
+  "Before building, I keep all three on the same context — the bedrock that lets us reconnect after any interruption.",
+  "Set the scene: the task, the three-agent CrewAI pipeline, and OpenEvolve's mutate-score-select loop.",
+  "An earlier unprotected run crashed to the 0.35 floor about a third of the time.",
+  "The seam: my question forced Claude's failure taxonomy — five failure modes, each with its own defense.",
+  "The principle behind every defense: freeze the protocol, free the policy — like a power socket.",
+  "Three defenses L0/L1/L2; L0 makes every tool call visible so the next mutation can act on it.",
+  "L1 clamps illegal values and never raises; the whitelist is the alphabet, the policy the sentence.",
+  "Wiring turns data_retriever from caller to extractor, removing the crash risk.",
+  "Four sandbox gates let evolution invent tools safely, and docstrings co-evolve for discoverability.",
+  "A disjoint holdout is the overfitting mirror — a big gap means memorized, not generalized.",
+  "Use the two sub-metrics as diversity dimensions to keep extreme specialists alive.",
+  "Honest reporting caught it: a 0.84 score hid that the tools never attached.",
+  "I gatekeep irreversibles, and our knowledge is complementary — environment sense plus tooling detail.",
+  "Build guardrails first, then delegate — 36% crashes became zero.",
+  "Recap the five collaboration patterns and ask which they'd use tomorrow.",
+  "iter22 is an emergent product — my decision, Claude's frame, OpenEvolve's formula.",
+  "After iter22 it stalled into a local optimum — over-engineering, trade-offs, island convergence.",
+  "Escaping isn't more generations; it's three knobs — more tasks, diverse island seeds, tool evolution.",
+  "Even the eight crashes became insight: five broken YAML, three rate limits.",
+  "A rubric by reversibility, whether value judgment is needed, and search-space size.",
+  "Delegating autonomy is a new skill; honesty plus gatekeeping is the bedrock; a healthy score isn't correctness.",
+  "The real product is a reusable human-plus-AI-plus-evolution workflow.",
+];
+let _ni = 0;
+function mkSlide() { const sl = p.addSlide(); if (NOTES[_ni]) sl.addNotes(NOTES[_ni]); _ni++; return sl; }
 
 function header(s, kicker, title) {
   s.background = { color: LIGHT };
@@ -78,7 +111,7 @@ function codeRef(s, txt, dark) {
 const chain = [["Me", HUMAN], ["Claude", CLAUDE], ["OpenEvolve", OE]];
 
 // ============================================================ S1 TITLE
-let s = p.addSlide();
+let s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("HUMAN × CLAUDE CODE × OPENEVOLVE", { x: 1, y: 1.75, w: 11.5, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 3, margin: 0 });
@@ -94,7 +127,7 @@ s.addText("One talk covering both “how the system was built” and “how huma
 codeRef(s, "repo · entry points openevolve_evaluator.py · config/openevolve_config.yaml · config/agents_evolving.yaml", true);
 
 // ============================================================ S2 RESULT TEASER
-s = p.addSlide();
+s = mkSlide();
 header(s, "Opening", "What did we build?");
 const stats = [
   ["baseline", "0.28 → 0.72", "stability dividend from the deterministic executor", HUMAN],
@@ -112,7 +145,7 @@ stats.forEach((t, i) => {
 s.addText("And no single person wrote it — it’s the work of three agents collaborating: Me + Claude + OpenEvolve.", { x: 0.6, y: 5.6, w: 12, h: 0.6, fontFace: HF, fontSize: 17, italic: true, color: NAVY, align: "center", margin: 0 });
 
 // ============================================================ S3 AGENDA
-s = p.addSlide();
+s = mkSlide();
 header(s, "Agenda", "Agenda & learning goals");
 const parts = [
   ["1", "Collaboration architecture", "three agents · autonomy vs guardrails"],
@@ -136,7 +169,7 @@ s.addText([
 s.addText("Main thread: the collaboration story is the shell; the technical taxonomy is the worked case embedded inside.", { x: 0.55, y: 6.15, w: 12, h: 0.4, fontFace: BF, fontSize: 13, italic: true, color: BLUE, margin: 0 });
 
 // ============================================================ S4 THREE ROLES
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Meet the three roles");
 const roles = [
   ["I (Human)", "the presenter", "set direction · decide\nask · gatekeep", HUMAN],
@@ -155,7 +188,7 @@ s.addText("Key: the last two are both AI, yet play completely different roles; I
 codeRef(s, "Me+Claude write config/agents.yaml (production) · agents_evolving.yaml (seed) ｜ OpenEvolve edits evolvable_tools.py:18-58");
 
 // ============================================================ S5 NESTED LAYERS
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Nested layers: a chain of delegated autonomy");
 const layers = [
   ["I (Human)", "intent / decisions", HUMAN],
@@ -175,7 +208,7 @@ s.addText("This isn’t “me using a tool” — it’s me delegating autonomy 
 codeRef(s, "Me→config/*.yaml ｜ Claude→src/tools/ + src/crews/ + src/flows/ ｜ OpenEvolve→agents_evolving.yaml EVOLVE-BLOCK");
 
 // ============================================================ S6 ARCHITECT vs PROSPECTOR
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Claude × OpenEvolve: architect vs prospector");
 card(s, 0.6, 1.95, 5.9, 1.95, "EAF0FA");
 s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 1.95, w: 0.12, h: 1.95, fill: { color: CLAUDE } });
@@ -198,7 +231,7 @@ s.addText("Not who’s stronger — different species filling gaps: Claude desig
 codeRef(s, "Claude builds the frame src/tools/tool_loader.py (77 AST / 120 sandbox) · OpenEvolve explores in evolvable_tools.py:18-58 EVOLVE-BLOCK");
 
 // ============================================================ S7 AUTONOMY vs GUARDRAIL + CONSTITUTION
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Higher autonomy, stronger guardrail + the safety constitution");
 const gv = [
   ["Layer", "Autonomy", "Guardrail"],
@@ -231,7 +264,7 @@ s.addText("The more I let it act autonomously, the stronger the guardrail I buil
 codeRef(s, "Guardrails: retrieval_executor.py:53 normalize_policy (clamp) · tool_loader.py:77-177 (AST→sandbox→wrap)");
 
 // ============================================================ S7b ALIGN CONTEXT FIRST
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Where collaboration starts: align context first");
 s.addText("Before anything, I (Human) keep all three on the same context — the bedrock of all collaboration.", { x: 0.6, y: 1.62, w: 12.15, h: 0.4, fontFace: BF, fontSize: 13.5, color: BLUE, margin: 0 });
 const ctx = [
@@ -250,7 +283,7 @@ card(s, 0.6, 6.2, 12.15, 0.82, NAVY);
 s.addText("I act as the “owner” of context: align at the start, recall history, confirm continuously, write it down — so any interruption can be reconnected from the record.", { x: 0.95, y: 6.2, w: 11.5, h: 0.82, fontFace: HF, fontSize: 13.5, bold: true, color: AMBER, valign: "middle", margin: 0 });
 
 // ============================================================ S8 THE STAGE
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Problem", "The stage: the task + CrewAI + OpenEvolve");
 s.addText([
   { text: "Track 1: ", options: { bold: true, color: NAVY } },
@@ -274,7 +307,7 @@ s.addText("MAP-Elites archive · island model · EVOLVE-BLOCK markers · combine
 codeRef(s, "evaluator.py:96 evaluate · :106-108 fitness ｜ simulation_crew.py:42-89 three agents ｜ openevolve_config.yaml:10-88");
 
 // ============================================================ S9 THE CRASH SITE
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Problem", "The crash site: evolution broke itself");
 s.addText("In an earlier “unprotected” run, a mutation to the agent prompt broke tool calling → the whole flow crashed", { x: 0.6, y: 1.9, w: 12.15, h: 0.4, fontFace: BF, fontSize: 15, color: INK, margin: 0 });
 s.addChart(p.charts.LINE, [
@@ -293,7 +326,7 @@ s.addText("That run hit this floor ~36% of the time — one broken tool call and
 codeRef(s, "openevolve_evaluator.py:133-137 timeout fallback · :179-184 exception fallback (both return _result(0.0))");
 
 // ============================================================ S10 SEAM: failure taxonomy
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · The seam", "Pattern 1: Claude’s “failure taxonomy”");
 s.addText([
   { text: "Failure taxonomy = ", options: { bold: true, color: NAVY } },
@@ -322,7 +355,7 @@ s.addText("Upside: break any one layer and worst case is degradation, not a tota
 codeRef(s, "Landed in src/tools/{interaction_tool_wrapper,retrieval_executor,tool_loader}.py");
 
 // ============================================================ S11 PROTOCOL/POLICY
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Solution", "Design principle: separate protocol from policy");
 card(s, 0.6, 2.0, 12.15, 1.9, WHITE);
 s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 2.0, w: 0.12, h: 1.9, fill: { color: NAVY } });
@@ -344,7 +377,7 @@ s.addText("Like a power outlet: the socket shape is the “protocol” (fixed); 
 codeRef(s, "Protocol retrieval_executor.py:28-30 ALLOWED_QUERIES/STRATEGIES (frozen) ｜ Policy agents_evolving.yaml:11-16 retrieval_policy");
 
 // ============================================================ S12 OVERVIEW + L0
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Solution", "The three-layer solution + L0 observability");
 const lay = [
   ["L0", "See it", "tool-call observability — turn blind spots into signal", GREEN],
@@ -367,7 +400,7 @@ s.addText([
 codeRef(s, "interaction_tool_wrapper.py:21 _record · :26 drain_tool_log ｜ openevolve_evaluator.py:31 _summarize_tool_use");
 
 // ============================================================ S13 L1 clamp + whitelist
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L1", "L1: clamp executor + “a whitelist ≠ no room to evolve”");
 card(s, 0.6, 2.0, 6.0, 4.1, "11183B");
 s.addText([
@@ -394,7 +427,7 @@ s.addText([
 codeRef(s, "retrieval_executor.py:44 _clamp_int · :53 normalize_policy · :29 ALLOWED_QUERIES · :140 execute_policy");
 
 // ============================================================ S14 L1 wiring
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L1", "Wiring: data_retriever from “caller” to “extractor”");
 card(s, 0.6, 2.2, 5.95, 3.9);
 s.addText("Before", { x: 0.9, y: 2.5, w: 5, h: 0.4, fontFace: HF, fontSize: 17, bold: true, color: RED, margin: 0 });
@@ -416,7 +449,7 @@ s.addText("A pure-text task — can’t crash on tool calling.", { x: 7.1, y: 5.
 codeRef(s, "src/flows/serving_flow.py:85-93 execute_policy → inject retrieved_context ｜ simulation_crew.py:42-50 data_retriever has no tools");
 
 // ============================================================ S15 L2 four gates
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L2", "L2: a four-gate sandbox + docstring co-evolution");
 const gates = [
   ["1", "AST safety scan", "block import / open / exec / dunder"],
@@ -439,7 +472,7 @@ s.addText([
 codeRef(s, "tool_loader.py:77/:106/:120/:156 gates · :60 ReadOnlyKit · :164 docstring ｜ simulation_crew.py:53-62 attach to analyst");
 
 // ============================================================ S16 #7 train/val
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 4 · Trust mechanisms", "Train / Val split: the overfitting mirror");
 s.addText("Evolution “memorizes the answers” — specializes to those train tasks without generalizing. A disjoint holdout catches it.", { x: 0.6, y: 1.95, w: 12.15, h: 0.4, fontFace: BF, fontSize: 14.5, color: INK, margin: 0 });
 card(s, 0.6, 2.7, 5.95, 3.4, "F7E9E7");
@@ -460,7 +493,7 @@ s.addText("make validate-holdout — disjoint verified, overlap = 0", { x: 0.6, 
 codeRef(s, "evaluator.py:83-84 OPENEVOLVE_TASK_DIR · scripts/validate_holdout.py:25 switch to holdout · create_sampled_dataset.py:8 disjoint");
 
 // ============================================================ S17 #6 MAP-Elites
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 4 · Trust mechanisms", "MAP-Elites custom dimensions");
 s.addText("A single combined_score squashes two extreme specialists into a mediocre middle. Use the two sub-metrics as diversity dimensions.", { x: 0.6, y: 1.95, w: 12.15, h: 0.4, fontFace: BF, fontSize: 14.5, color: INK, margin: 0 });
 s.addChart(p.charts.SCATTER, [
@@ -487,7 +520,7 @@ s.addText("Keeps elites across the trade-off frontier and breeds hybrids.", { x:
 codeRef(s, "config/openevolve_config.yaml:85-88 feature_dimensions (8×8) · openevolve_evaluator.py:47-59 _result(extra_metrics)");
 
 // ============================================================ S18 honest bug
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 5 · Patterns", "Pattern 2: honest reporting — a healthy score ≠ correct behavior");
 card(s, 0.6, 1.95, 5.95, 2.5, "F7E9E7");
 s.addText("Looked perfect", { x: 0.9, y: 2.15, w: 5, h: 0.4, fontFace: HF, fontSize: 15, bold: true, color: RED, margin: 0 });
@@ -509,7 +542,7 @@ s.addText("Graceful fallback disguises “tools never attached” as “score lo
 codeRef(s, "tool_loader.py:139-146 _safe_import · :164 docstring · simulation_crew.py:21-30 graceful [] · tests/test_tool_loader.py:185-203");
 
 // ============================================================ S19 gatekeep + complementary
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 5 · Patterns", "Patterns 3 & 4: gatekeep irreversibles + complementary knowledge");
 card(s, 0.6, 2.1, 5.95, 4.0, "F7ECEC");
 s.addText("③ I gatekeep irreversible actions", { x: 0.9, y: 2.35, w: 5.5, h: 0.4, fontFace: HF, fontSize: 15, bold: true, color: RED, margin: 0 });
@@ -529,7 +562,7 @@ s.addText([
 s.addText("Two kinds of knowledge, complementary — without either, the run won’t finish.", { x: 0.6, y: 6.25, w: 12, h: 0.4, fontFace: BF, fontSize: 14, italic: true, color: NAVY, align: "center", margin: 0 });
 
 // ============================================================ S20 layered delegation
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 5 · Patterns", "Pattern 5: layered delegation of autonomy (the core)");
 s.addText("I had Claude build a safe frame (L0/L1/L2) for OpenEvolve — only with it in place did I dare let go. Back to the safety constitution.", { x: 0.6, y: 2.0, w: 12.15, h: 0.6, fontFace: BF, fontSize: 16, color: INK, margin: 0 });
 card(s, 0.6, 2.9, 5.95, 2.9, "F7E9E7");
@@ -542,7 +575,7 @@ s.addText("My precondition for delegating autonomy: first build a “worst case 
 codeRef(s, "Three guardrails interaction_tool_wrapper.py(L0) · retrieval_executor.py(L1) · tool_loader.py(L2)");
 
 // ============================================================ S21 five patterns recap
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 5 · Patterns", "Five collaboration patterns · one-page recap");
 const pat = [
   ["1", "Questions deepen design", "my open question → the failure taxonomy"],
@@ -561,7 +594,7 @@ pat.forEach((r, i) => {
 s.addText("💬 Which pattern could you use in your own project tomorrow?", { x: 0.6, y: 6.78, w: 12, h: 0.3, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
 
 // ============================================================ S22 three layers + formula
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 6 · Climax", "iter22: an emergent product of three-layer collaboration");
 const contrib = [
   ["I (Human)", "decided to run 50 iters\nset caffeinate to run overnight", HUMAN],
@@ -585,7 +618,7 @@ s.addText([
 codeRef(s, "Evolution target config/agents_evolving.yaml EVOLVE-BLOCK");
 
 // ============================================================ S23 after iter22
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 6 · Climax", "The deeper part: “after” iter22 — a local optimum");
 s.addText("I had Claude trace every descendant of iter22 — conclusion: no better offspring appeared after it.", { x: 0.6, y: 1.95, w: 12.15, h: 0.5, fontFace: BF, fontSize: 16, color: INK, margin: 0 });
 const aft = [
@@ -608,7 +641,7 @@ s.addText([
 codeRef(s, "Island/migration config/openevolve_config.yaml:71-78 (num_islands:3, migration)");
 
 // ============================================================ S23b how to escape
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 6 · Climax", "So how do you escape the local optimum?");
 s.addText("Escaping isn’t “run more generations” (that just over-complicates the formula) — it’s turning three knobs at once:", { x: 0.6, y: 1.62, w: 12.15, h: 0.4, fontFace: BF, fontSize: 13.5, color: BLUE, margin: 0 });
 const fixes = [
@@ -635,7 +668,7 @@ s.addText([
 codeRef(s, "more tasks openevolve_evaluator.py:115 · islands/migration openevolve_config.yaml:71-78 · tool evolution evolvable_tools.py:18-58");
 
 // ============================================================ S24 failure as insight
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 6 · Climax", "Even “failure” is a shared insight");
 s.addText("8 low-score crashes → I had Claude comb the data for causes:", { x: 0.6, y: 2.1, w: 12, h: 0.5, fontFace: BF, fontSize: 18, color: INK, margin: 0 });
 card(s, 0.6, 3.0, 5.95, 2.4, "F7E9E7");
@@ -646,7 +679,7 @@ s.addText("Collaboration produces not only successes but shared understanding of
 codeRef(s, "diff_based_evolution:false (full-rewrite risk) see openevolve_config.yaml:18");
 
 // ============================================================ S25 who does what
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 7 · Reflection", "Who should do what?");
 const who = [
   ["I (Human) do it myself", "direction · value judgments\nirreversible decisions · domain/physical knowledge", HUMAN],
@@ -664,7 +697,7 @@ s.addText("I split the work by three criteria: reversibility · whether value ju
 codeRef(s, "Mapping: Me→config/*.yaml ｜ Claude→src/ + tests/ ｜ evolution→EVOLVE-BLOCK (agents_evolving.yaml / evolvable_tools.py)");
 
 // ============================================================ S26 key takeaways
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 7 · Reflection", "Key takeaways");
 const tk = [
   "Evolution can design agents, but must be stopped from breaking itself → guardrails stronger the deeper you go (worst case = degradation)",
@@ -681,7 +714,7 @@ tk.forEach((t, i) => {
 s.addText("💬 Back to the opening: is your AI a tool, or a partner?", { x: 0.6, y: 6.6, w: 12, h: 0.35, fontFace: BF, fontSize: 14, italic: true, color: AMBER, margin: 0 });
 
 // ============================================================ S27 closing
-s = p.addSlide();
+s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("Thank you · Q & A", { x: 0.95, y: 1.9, w: 11.5, h: 1, fontFace: HF, fontSize: 42, bold: true, color: WHITE, margin: 0 });

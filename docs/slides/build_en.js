@@ -10,6 +10,33 @@ const INK = "23272E", MUTE = "6B7280", LIGHT = "F4F7FB", WHITE = "FFFFFF";
 const HF = "Georgia", BF = "Calibri", CF = "Consolas";
 const W = 13.33, H = 7.5;
 const sh = () => ({ type: "outer", color: "000000", blur: 7, offset: 3, angle: 135, opacity: 0.12 });
+const NOTES = [
+  "Set up the story: turning a crash-prone tool-calling system into a safely evolvable multi-agent system.",
+  "Six parts: background, the incident and taxonomy, the layered fix, trust mechanisms, engineering lessons, and results.",
+  "Track 1 predicts a user's stars and review; fitness blends rating accuracy and text similarity, which often trade off.",
+  "Three CrewAI agents run sequentially; OpenEvolve's job is to optimize every facet of this pipeline, not just prompt text.",
+  "OpenEvolve mutates, scores and selects programs with an LLM — the core question is letting it design itself without breaking itself.",
+  "We mapped ten optimization directions; today follows the deterministic-retrieval thread, all under one constraint: rate limits.",
+  "An earlier run repeatedly crashed to the 0.35 floor whenever a prompt mutation broke tool calling.",
+  "Sort how tool calling can break into five failure modes, one to five — this is the backbone of the whole talk.",
+  "The key insight: fitness tells you it broke, not where it broke — a single scalar can't do credit assignment.",
+  "The founding principle: freeze how a tool is called, let how it's used evolve; worst case is graceful degradation.",
+  "Three defenses — L0 to see it, L1 to use it safely, L2 to build it safely.",
+  "L0 logs every tool call so the blind spot becomes a signal the next mutation can act on — a pure add-on.",
+  "The executor clamps any illegal policy back into the legal space and never raises, so the pipeline can't crash.",
+  "Bust the misconception: a frozen whitelist is the alphabet, the policy is the sentence — the real ceiling is the dataset.",
+  "Wiring turns data_retriever from a tool-caller into a text extractor, removing the crash risk entirely.",
+  "L2 lets evolution invent tools through four sandbox gates, with ReadOnlyKit funneling everything to read-only data.",
+  "Docstrings co-evolve because the agent reads them to decide; tools mount on the analyst, the decision point.",
+  "A disjoint holdout exposes overfitting — a big train-minus-holdout gap means it memorized rather than generalized.",
+  "Use the two sub-metrics as diversity dimensions so extreme specialists survive instead of being averaged away.",
+  "Two real bugs taught the maxim: a healthy score isn't correct behavior — verify the feature, not just the score.",
+  "After L1 wiring, LLM calls per task dropped, tool-calling crashes went to zero, and coverage stabilized.",
+  "The full taxonomy is done; close with takeaways on safe evolution, trust mechanisms, and reading the source.",
+  "Wrap up and point to the repo and design notes for the full record.",
+];
+let _ni = 0;
+function mkSlide() { const sl = p.addSlide(); if (NOTES[_ni]) sl.addNotes(NOTES[_ni]); _ni++; return sl; }
 
 function header(s, kicker, title) {
   s.background = { color: LIGHT };
@@ -69,7 +96,7 @@ function codeRef(s, txt, dark) {
 }
 
 // ============================================================ 1 TITLE
-let s = p.addSlide();
+let s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("OPENEVOLVE × CREWAI", { x: 1, y: 1.9, w: 11, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 3, margin: 0 });
@@ -79,7 +106,7 @@ s.addText("AgentSociety Challenge · Tool Calling Failure Taxonomy", { x: 1, y: 
 codeRef(s, "Entry points: config/openevolve_config.yaml · openevolve_evaluator.py · config/agents_evolving.yaml", true);
 
 // ============================================================ 2 AGENDA
-s = p.addSlide();
+s = mkSlide();
 header(s, "Agenda", "Agenda & learning goals");
 const parts = [
   ["1", "Background", "Task, CrewAI, OpenEvolve"],
@@ -103,7 +130,7 @@ s.addText([
 codeRef(s, "Reference throughout: docs/evolution_design_notes.md (full design & validation record)");
 
 // ============================================================ 3 TASK
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Background", "The task: simulate user behavior");
 s.addText([
   { text: "Track 1: ", options: { bold: true, color: NAVY } },
@@ -131,7 +158,7 @@ s.addText("“ We predict not the truth, but how this user would react ”", { x
 codeRef(s, "openevolve_evaluator.py:96 evaluate() · :106-108 combined_score = overall_quality · :149-151 sub-metrics");
 
 // ============================================================ 4 CREWAI PIPELINE
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Background", "The base: a 3-agent CrewAI pipeline");
 const ag = [
   ["data_retriever", "fetches 4 query types", BLUE],
@@ -151,7 +178,7 @@ s.addText("OpenEvolve’s job: not just evolve prompt text, but optimize every f
 codeRef(s, "src/crews/simulation_crew.py:42 data_retriever · :53 analyst · :65 behavior_simulator · :89 crew(Process.sequential)");
 
 // ============================================================ 5 OPENEVOLVE
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Background", "OpenEvolve: evolving programs with an LLM");
 s.addText("Open-source take on Google AlphaEvolve — repeated “mutate → score → select”", { x: 0.6, y: 1.95, w: 12, h: 0.4, fontFace: BF, fontSize: 16, color: INK, margin: 0 });
 const loop = [["sample", "draw a parent from the pool"], ["mutate", "LLM mutates the program"], ["evaluate", "evaluator scores it"], ["select", "MAP-Elites keeps elites"]];
@@ -171,7 +198,7 @@ s.addText("The core question: how to let the system “design itself” — with
 codeRef(s, "config/openevolve_config.yaml:10 max_iterations · :18 diff_based_evolution:false · :71-88 database(islands/MAP-Elites)");
 
 // ============================================================ 6 TEN DIRECTIONS
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Background", "10 directions to optimize (novelty × feasibility)");
 s.addChart(p.charts.SCATTER, [
   { name: "X", values: [4.5, 4.5, 3.5, 5, 3, 3, 3, 4.5, 2.5, 5] },
@@ -202,7 +229,7 @@ s.addText([
 codeRef(s, "docs/evolution_design_notes.md §2 (10 directions) · §10 rate-limit defenses · openevolve_config.yaml:32 retries");
 
 // ============================================================ 7 INCIDENT
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Incident", "The crash site: evolution broke the system");
 s.addText("In an earlier run, a mutation to the agent prompt broke tool calling → the whole pipeline crashed", { x: 0.6, y: 1.95, w: 12.15, h: 0.4, fontFace: BF, fontSize: 15.5, color: INK, margin: 0 });
 s.addChart(p.charts.LINE, [
@@ -221,7 +248,7 @@ s.addText("Many iterations keep hitting this floor — one broken tool call and 
 codeRef(s, "openevolve_evaluator.py:133-137 timeout fallback · :179-184 exception fallback (both return _result(0.0))");
 
 // ============================================================ 8 TAXONOMY
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Incident", "Tool Calling Failure Taxonomy");
 const tax = [
   ["①", "Call protocol", "tool-call text format broken → parser misses it", RED],
@@ -242,7 +269,7 @@ s.addText("Originally only ① was protected (tasks.yaml frozen); ②–⑤ were
 codeRef(s, "docs/evolution_design_notes.md §3 (5-layer table) · defenses: interaction_tool_wrapper.py · retrieval_executor.py · tool_loader.py");
 
 // ============================================================ 9 INSIGHT
-s = p.addSlide();
+s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("KEY INSIGHT", { x: 1, y: 1.7, w: 11, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 3, margin: 0 });
@@ -251,7 +278,7 @@ s.addText("That’s why some seemingly harmless mutations cause crashes — a si
 codeRef(s, "docs/evolution_design_notes.md §3 (key insight) — the fix is L0: turn the blind spot into signal", true);
 
 // ============================================================ 10 PROTOCOL/POLICY
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Principle", "Design principle: separate protocol from policy");
 card(s, 0.6, 2.0, 12.15, 1.9, WHITE);
 s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 2.0, w: 0.12, h: 1.9, fill: { color: NAVY } });
@@ -265,7 +292,7 @@ s.addText([{ text: "Safety constitution  ", options: { bold: true, color: RED } 
 codeRef(s, "Protocol: retrieval_executor.py:28-30 ALLOWED_QUERIES/STRATEGIES (frozen) ｜ Policy: config/agents_evolving.yaml:11-16 retrieval_policy (evolved)");
 
 // ============================================================ 11 SOLUTION OVERVIEW
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Solution", "Layered solution: L0 → L1 → L2");
 const lay = [
   ["L0", "See it", "Tool-call observability — turn blind spots into signal", GREEN],
@@ -284,7 +311,7 @@ s.addText("Every layer obeys the same constitution: worst case is a low score, n
 codeRef(s, "L0 interaction_tool_wrapper.py · L1 retrieval_executor.py · L2 tool_loader.py (all in src/tools/)");
 
 // ============================================================ 12 L0
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L0", "L0: tool-call observability");
 card(s, 0.6, 2.0, 6.0, 4.6);
 s.addText("What it does", { x: 0.9, y: 2.25, w: 5, h: 0.4, fontFace: HF, fontSize: 17, bold: true, color: GREEN, margin: 0 });
@@ -302,7 +329,7 @@ s.addText([{ text: "Design note  ", options: { bold: true, color: ICE } }, { tex
 codeRef(s, "interaction_tool_wrapper.py:17 _TOOL_CALL_LOG · :21 _record · :26 drain_tool_log ｜ openevolve_evaluator.py:31 _summarize_tool_use");
 
 // ============================================================ 13 L1 executor
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L1", "L1: take tool calling out of the LLM’s hands");
 s.addText([
   { text: "The evolution side declares ", options: { color: INK } },
@@ -331,7 +358,7 @@ s.addText("Worst case = degrade to baseline retrieval; the pipeline never crashe
 codeRef(s, "src/tools/retrieval_executor.py:44 _clamp_int · :53 normalize_policy (clamp) · :103 _sample_reviews · :140 execute_policy");
 
 // ============================================================ 14 whitelist != no space
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L1", "Big misconception: a whitelist ≠ no room to evolve");
 card(s, 0.6, 2.1, 12.15, 1.5, NAVY);
 s.addText([
@@ -348,7 +375,7 @@ s.addText([
 codeRef(s, "src/tools/retrieval_executor.py:29 ALLOWED_QUERIES (alphabet) · :33-37 DEFAULT_POLICY · :53 normalize_policy (compose sentence)");
 
 // ============================================================ 15 L1 wiring
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L1", "Wiring: data_retriever from “caller” to “extractor”");
 card(s, 0.6, 2.2, 5.95, 3.9);
 s.addText("Before", { x: 0.9, y: 2.5, w: 5, h: 0.4, fontFace: HF, fontSize: 17, bold: true, color: RED, margin: 0 });
@@ -370,7 +397,7 @@ s.addText("A pure-text task — can’t crash on tool calling.", { x: 7.1, y: 5.
 codeRef(s, "src/flows/serving_flow.py:85-93 execute_policy → inject retrieved_context ｜ simulation_crew.py:42-50 data_retriever has no tools");
 
 // ============================================================ 16 L2 four gates
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L2", "L2: let evolution invent tools — a four-gate sandbox");
 s.addText("Data is fixed (3 tables) → a “new tool” = bounded feature engineering, not unbounded code generation", { x: 0.6, y: 1.95, w: 12.15, h: 0.4, fontFace: BF, fontSize: 14.5, italic: true, color: BLUE, margin: 0 });
 const gates = [
@@ -390,7 +417,7 @@ s.addText([{ text: "ReadOnlyKit  ", options: { bold: true, color: AMBER } }, { t
 codeRef(s, "src/tools/tool_loader.py:77 ast_safety_scan · :106 signature_ok · :120 trial_run · :156 _wrap_as_crewai_tool · :60 ReadOnlyKit");
 
 // ============================================================ 17 docstring + placement
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · L2", "docstring co-evolution + tools at the “decision point”");
 card(s, 0.6, 2.0, 6.0, 4.6);
 s.addText("docstring co-evolution", { x: 0.9, y: 2.25, w: 5.4, h: 0.4, fontFace: HF, fontSize: 17, bold: true, color: NAVY, margin: 0 });
@@ -416,7 +443,7 @@ s.addText([
 codeRef(s, "src/tools/tool_loader.py:156-177 _wrap_as_crewai_tool (docstring→description) · simulation_crew.py:53-62 analyst tools=_load_analyst_tools()");
 
 // ============================================================ 18 #7 train/val
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 4 · Trust mechanisms", "#7 Train / Val split: the overfitting mirror");
 s.addText("Evolution “memorizes the answers” — specializes to those train tasks without generalizing. A disjoint holdout catches it.", { x: 0.6, y: 1.95, w: 12.15, h: 0.4, fontFace: BF, fontSize: 14.5, color: INK, margin: 0 });
 card(s, 0.6, 2.7, 5.95, 3.6, "F7E9E7");
@@ -437,7 +464,7 @@ s.addText("make validate-holdout — disjoint verified, overlap = 0", { x: 0.6, 
 codeRef(s, "openevolve_evaluator.py:83-84 OPENEVOLVE_TASK_DIR · scripts/validate_holdout.py:25 switch to holdout · create_sampled_dataset.py:8 disjoint");
 
 // ============================================================ 19 #6 MAP-Elites
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 4 · Trust mechanisms", "#6 MAP-Elites custom dimensions");
 s.addText("A single combined_score squashes two extreme specialists to a mediocre middle. Use the two sub-metrics as diversity dimensions instead.", { x: 0.6, y: 1.95, w: 12.15, h: 0.4, fontFace: BF, fontSize: 14.5, color: INK, margin: 0 });
 s.addChart(p.charts.SCATTER, [
@@ -464,7 +491,7 @@ s.addText("Keeps elites across the trade-off frontier and breeds hybrids.", { x:
 codeRef(s, "config/openevolve_config.yaml:85-88 feature_dimensions (8×8) · openevolve_evaluator.py:47-59 _result(extra_metrics) · :174-177");
 
 // ============================================================ 20 engineering lessons
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 5 · Engineering lessons", "Two real bugs, one maxim");
 card(s, 0.6, 2.0, 6.0, 2.3);
 s.addText("Bug #1 — __import__ in the restricted sandbox", { x: 0.9, y: 2.25, w: 5.4, h: 0.4, fontFace: HF, fontSize: 14.5, bold: true, color: NAVY, margin: 0 });
@@ -478,7 +505,7 @@ s.addText("Graceful fallback disguises “tools never attached” as “score lo
 codeRef(s, "tool_loader.py:139-146 _safe_import (bug#1) · :156-177 docstring transfer (bug#2) · simulation_crew.py:21-30 graceful [] hides the failure", true);
 
 // ============================================================ 21 results
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 6 · Results", "Before vs after L1 wiring: the stability shift");
 const rows = [
   ["Metric", "Before (earlier run)", "After L1 wiring"],
@@ -512,7 +539,7 @@ s.addText([
 codeRef(s, "docs/evolution_design_notes.md §12.4 (before/after) · §12.3 (evolution-run history)");
 
 // ============================================================ 22 full picture / takeaways
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 6 · Results", "Full picture + key takeaways");
 card(s, 0.6, 2.0, 4.0, 4.7, NAVY);
 s.addText("Taxonomy progress", { x: 0.85, y: 2.25, w: 3.5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: AMBER, margin: 0 });
@@ -539,7 +566,7 @@ tk.forEach((t, i) => {
 codeRef(s, "docs/evolution_design_notes.md §11 (progress & PRs) · §12.7 (full-architecture data: baseline 0.72 → best 0.842)");
 
 // ============================================================ 23 closing
-s = p.addSlide();
+s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("Thank you · Q & A", { x: 0.95, y: 2.6, w: 11.5, h: 1, fontFace: HF, fontSize: 42, bold: true, color: WHITE, margin: 0 });

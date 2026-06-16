@@ -11,6 +11,36 @@ const HF = "Georgia", BF = "Calibri", CF = "Consolas";
 const HUMAN = GREEN, CLAUDE = BLUE, OE = AMBER;
 const W = 13.33, H = 7.5;
 const sh = () => ({ type: "outer", color: "000000", blur: 7, offset: 3, angle: 135, opacity: 0.12 });
+const NOTES = [
+  "Frame it: three agents collaborate, and I delegate autonomy down a three-layer chain.",
+  "Pose the opening question: is your AI a tool, or a partner that makes its own decisions?",
+  "Six parts: architecture, roles, five patterns, the iter22 climax, reflection, and closing.",
+  "Introduce the three players — me, Claude, and OpenEvolve — two of them AI but in very different roles.",
+  "Autonomy rises as you go inward, and so must the guardrails — this is delegation, not tool use.",
+  "Claude is the intentional architect; OpenEvolve the intentionless prospector — different species, complementary.",
+  "Each layer's autonomy is matched by a guardrail; the more I let go, the stronger the guardrail.",
+  "Every PR and experiment runs the same loop: my intent, Claude builds, verify, honest report, I decide.",
+  "AI increasingly uses other AIs, so collaboration is multi-layer — the question is how to delegate safely.",
+  "My job is the steering wheel and the brake: direction, irreversible calls, questions, gatekeeping.",
+  "Claude implements, verifies by reading the source, analyzes data, and reports honestly.",
+  "OpenEvolve mutates autonomously inside the frame — it evolved the rating formula nobody wrote.",
+  "None of the three is optional; remove my layer and there's no direction.",
+  "A good question beats a good answer — my open question forced the failure taxonomy.",
+  "Honest reporting caught the bug: a 0.84 score hid that the tools never actually attached.",
+  "I gatekeep irreversible actions — Claude asks before merging, installing, or changing the system.",
+  "Knowledge is complementary: my environment sense plus Claude's tooling detail got the run finished.",
+  "The core pattern: build guardrails first, then delegate — 36% crashes became zero.",
+  "Recap the five patterns and ask which one they could use tomorrow.",
+  "All three layers contributed to iter22 — my decision, Claude's frame, OpenEvolve's formula.",
+  "No single layer could have produced iter22 — it's an emergent product of the collaboration.",
+  "After iter22 came over-engineering, sub-metric trade-offs, and island convergence — a local optimum.",
+  "Even the eight crashes became insight: five broken YAML, three rate limits — failure understood together.",
+  "A rubric: I take direction and irreversibles, Claude takes implementation, evolution takes bounded exploration.",
+  "Delegating autonomy is a new skill; honesty plus human gatekeeping is the safety bedrock.",
+  "The real product is a reusable human-plus-AI-plus-evolution workflow, not just a 0.84 agent.",
+];
+let _ni = 0;
+function mkSlide() { const sl = p.addSlide(); if (NOTES[_ni]) sl.addNotes(NOTES[_ni]); _ni++; return sl; }
 
 function header(s, kicker, title) {
   s.background = { color: LIGHT };
@@ -69,7 +99,7 @@ function codeRef(s, txt, dark) {
 }
 
 // ============================================================ 1 TITLE
-let s = p.addSlide();
+let s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("HUMAN × CLAUDE CODE × OPENEVOLVE", { x: 1, y: 1.8, w: 11.5, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 3, margin: 0 });
@@ -86,7 +116,7 @@ s.addText("A talk about safe “human + AI + evolution” collaboration", { x: 1
 codeRef(s, "Three layers map to: Me→config/*.yaml ｜ Claude→src/ + tests/ ｜ OpenEvolve→EVOLVE-BLOCK", true);
 
 // ============================================================ 2 AN UNUSUAL COLLABORATION
-s = p.addSlide();
+s = mkSlide();
 s.background = { color: LIGHT };
 s.addShape(p.shapes.OVAL, { x: 0.55, y: 0.5, w: 0.16, h: 0.16, fill: { color: AMBER } });
 s.addText("OPENING", { x: 0.8, y: 0.46, w: 11, h: 0.3, fontFace: BF, fontSize: 12, bold: true, color: BLUE, charSpacing: 2, margin: 0 });
@@ -102,7 +132,7 @@ s.addText("This talk is the latter — and the partner brings a partner of its o
 codeRef(s, "Three agents: Me (decisions) · Claude (builds in src/) · OpenEvolve (mutates inside evolvable_tools.py:18 EVOLVE-BLOCK)");
 
 // ============================================================ 3 AGENDA
-s = p.addSlide();
+s = mkSlide();
 header(s, "Agenda", "Agenda & learning goals");
 const parts = [
   ["1", "Collaboration architecture", "Nested layers · autonomy vs guardrails"],
@@ -126,7 +156,7 @@ s.addText([
 codeRef(s, "Full text: docs/collaboration_workflow_outline.md ｜ Technical details: docs/evolution_design_notes.md");
 
 // ============================================================ 4 THREE ROLES
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Meet the three roles");
 const roles = [
   ["I (Human)", "the presenter", "set direction · decide\nask · gatekeep", HUMAN],
@@ -145,7 +175,7 @@ s.addText("Key: the last two are both AI, yet play completely different roles; I
 codeRef(s, "Me+Claude write config/agents.yaml (production) · config/agents_evolving.yaml (seed) ｜ OpenEvolve edits evolvable_tools.py:18-58");
 
 // ============================================================ 5 NESTED LAYERS
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Nested layers: a chain of delegated autonomy");
 const layers = [
   ["I (Human)", "intent / decisions", HUMAN],
@@ -165,7 +195,7 @@ s.addText("This isn’t “me using a tool” — it’s me delegating autonomy 
 codeRef(s, "Me→config/*.yaml ｜ Claude→src/tools/ + src/crews/ + src/flows/ ｜ OpenEvolve→agents_evolving.yaml:1-44 EVOLVE-BLOCK");
 
 // ============================================================ 5b ARCHITECT vs PROSPECTOR
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Claude × OpenEvolve: architect vs prospector");
 card(s, 0.6, 1.95, 5.9, 1.95, "EAF0FA");
 s.addShape(p.shapes.RECTANGLE, { x: 0.6, y: 1.95, w: 0.12, h: 1.95, fill: { color: CLAUDE } });
@@ -188,7 +218,7 @@ s.addText("Not who’s stronger — different species, each filling a gap: Claud
 codeRef(s, "Claude builds the frame src/tools/tool_loader.py (77 AST / 120 sandbox) · OpenEvolve explores in evolvable_tools.py:18-58 EVOLVE-BLOCK");
 
 // ============================================================ 6 AUTONOMY vs GUARDRAILS
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "Each layer’s “autonomy vs guardrail”");
 const gv = [
   ["Layer", "Autonomy", "Guardrail"],
@@ -220,7 +250,7 @@ s.addText("Maxim: the more I let it act autonomously, the stronger the guardrail
 codeRef(s, "Guardrails: retrieval_executor.py:53 normalize_policy (clamp) · tool_loader.py:77-177 (AST→sandbox→wrap)");
 
 // ============================================================ 7 COLLABORATION LOOP
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 1 · Architecture", "The collaboration loop: every PR, every experiment");
 const ring = [
   ["My intent", HUMAN], ["Claude builds", CLAUDE], ["Verify", CLAUDE],
@@ -240,7 +270,7 @@ s.addText("(next intent)", { x: cx - 1.0, y: cy + 0.5, w: 2.0, h: 0.4, fontFace:
 codeRef(s, "Workflow in CLAUDE.md “Git workflow” (main only takes PRs) · landed PRs in docs/evolution_design_notes.md §11");
 
 // ============================================================ 8 WHY WORTH LEARNING
-s = p.addSlide();
+s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("WHY THIS ARCHITECTURE IS WORTH LEARNING", { x: 1, y: 1.7, w: 11.5, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 2, margin: 0 });
@@ -249,7 +279,7 @@ s.addText("Collaboration is no longer single-layer. I want this project to show:
 codeRef(s, "Overall goal in docs/evolution_design_notes.md §1 (background & goals)", true);
 
 // ============================================================ 9 MY ROLE
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Roles", "My role: the steering wheel and the brake");
 const me = [
   ["Set direction", "“optimize every facet of the agent crew”"],
@@ -268,7 +298,7 @@ s.addText("Real example: I insist “main only takes PRs” — once Claude forg
 codeRef(s, "Rule written in CLAUDE.md “Git workflow: main only takes PR merges, no direct commits”");
 
 // ============================================================ 10 CLAUDE'S ROLE
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Roles", "Claude’s role: implementation and judgment");
 const cl = [
   "Turn my intent into code + tests",
@@ -287,7 +317,7 @@ s.addText("Real example: Claude read OpenEvolve’s source and found that “exa
 codeRef(s, "Read-the-source finding in docs/evolution_design_notes.md §9 (EVOLVE-BLOCK truth: parse_evolve_blocks is never called)");
 
 // ============================================================ 11 OPENEVOLVE'S ROLE
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Roles", "OpenEvolve’s role: the autonomous explorer");
 s.addText([
   { text: "Inside the safe frame Claude built, it ", options: { color: INK } },
@@ -302,7 +332,7 @@ s.addText("It can “find”, but it doesn’t know what it found — exactly th
 codeRef(s, "Evolution space: config/agents_evolving.yaml:1-44 EVOLVE-BLOCK (prompt) + evolvable_tools.py:18-58 (tools)");
 
 // ============================================================ 12 COMPLEMENTARY
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 2 · Roles", "Three complements — none is optional");
 const miss = [
   ["Only me (Human)", "no time / energy to do all the implementation", HUMAN],
@@ -320,7 +350,7 @@ s.addText("Each layer fills a gap — remove my layer, and there’s no directio
 codeRef(s, "“earlier run 36% crash → full architecture 0” comparison in docs/evolution_design_notes.md §12.7");
 
 // ============================================================ 13 PATTERN 1
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Patterns", "Pattern 1: questions that deepen the design");
 card(s, 0.6, 1.95, 5.9, 4.5, "EAF0FA");
 s.addText("The good question I asked", { x: 0.9, y: 2.2, w: 5.4, h: 0.4, fontFace: HF, fontSize: 15, bold: true, color: HUMAN, margin: 0 });
@@ -339,7 +369,7 @@ s.addText("A good question beats a good answer — by asking deeper, I turned a 
 codeRef(s, "5-layer taxonomy docs/evolution_design_notes.md §3 ｜ landed in src/tools/{interaction_tool_wrapper,retrieval_executor,tool_loader}.py");
 
 // ============================================================ 14 PATTERN 2
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Patterns", "Pattern 2: honest reporting, catching the bug");
 card(s, 0.6, 2.1, 5.95, 3.4, "F7E9E7");
 s.addText("Looked perfect", { x: 0.9, y: 2.35, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: RED, margin: 0 });
@@ -362,7 +392,7 @@ s.addText("“ A healthy score ≠ correct behavior ”   AI’s honesty is the 
 codeRef(s, "Cause simulation_crew.py:21-30 graceful [] hides it · fix tool_loader.py:164 · regression tests tests/test_tool_loader.py:185-203");
 
 // ============================================================ 15 PATTERN 3
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Patterns", "Pattern 3: I gatekeep irreversible actions");
 s.addText("Claude asks me first, then acts — it never runs irreversible actions on its own.", { x: 0.6, y: 2.05, w: 12, h: 0.5, fontFace: BF, fontSize: 18, color: INK, margin: 0 });
 const irr = ["merge PR", "4-hour experiment", "brew install", "change system settings", "create a new GitHub repo", "install LibreOffice"];
@@ -376,7 +406,7 @@ s.addText("Real example: before creating a repo or installing LibreOffice, Claud
 codeRef(s, "Principle in CLAUDE.md “Git workflow” (main only takes PR merges, no direct commits)");
 
 // ============================================================ 16 PATTERN 4
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Patterns", "Pattern 4: complementary human-AI knowledge");
 card(s, 0.6, 2.2, 5.95, 3.5, "E7F2EC");
 s.addText("I fill Claude’s blind spot", { x: 0.9, y: 2.45, w: 5.3, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: HUMAN, margin: 0 });
@@ -388,7 +418,7 @@ s.addText("My “environmental knowledge” × Claude’s “tooling detail” �
 codeRef(s, "How the full 50-iter run finished: docs/evolution_design_notes.md §12.7(b) (nohup detach harness + caffeinate -i -s)");
 
 // ============================================================ 17 PATTERN 5
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Patterns", "Pattern 5: layered delegation of autonomy (the core)");
 s.addText("I had Claude build a safe frame (L0/L1/L2 Failure Taxonomy) for OpenEvolve — only with the frame in place did I dare let go.", { x: 0.6, y: 2.0, w: 12.15, h: 0.6, fontFace: BF, fontSize: 16, color: INK, margin: 0 });
 card(s, 0.6, 2.9, 5.95, 2.9, "F7E9E7");
@@ -401,7 +431,7 @@ s.addText("My precondition for delegating autonomy: first build a “worst case 
 codeRef(s, "Three guardrails: interaction_tool_wrapper.py(L0) · retrieval_executor.py(L1) · tool_loader.py(L2) ｜ data §12.7");
 
 // ============================================================ 18 FIVE PATTERNS RECAP
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 3 · Patterns", "Five patterns · one-page recap");
 const pat = [
   ["1", "Questions deepen design", "my open question → the failure taxonomy"],
@@ -421,7 +451,7 @@ s.addText("💬 Which pattern could you use in your own project tomorrow?", { x:
 codeRef(s, "Full five-pattern version in docs/collaboration_workflow_outline.md (Part 3)");
 
 // ============================================================ 19 THREE LAYERS PRODUCE ITER22
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 4 · Climax", "Three layers collaborate to produce one evolved artifact");
 const contrib = [
   ["I (Human)", "decided to run 50 iters on the full\narchitecture; set caffeinate to run overnight", HUMAN],
@@ -445,7 +475,7 @@ s.addText([
 codeRef(s, "Evolution target config/agents_evolving.yaml EVOLVE-BLOCK · iter22 data docs/evolution_design_notes.md §12.7(b)");
 
 // ============================================================ 20 NO LAYER ALONE
-s = p.addSlide();
+s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("ITER22 IS AN EMERGENT PRODUCT OF THREE-LAYER COLLABORATION", { x: 1, y: 1.6, w: 11.8, h: 0.4, fontFace: BF, fontSize: 14, bold: true, color: ICE, charSpacing: 1, margin: 0 });
@@ -464,7 +494,7 @@ s.addText("No single layer could have done it alone.", { x: 1, y: 6.4, w: 11, h:
 codeRef(s, "Three-layer data docs/evolution_design_notes.md §12.7 (baseline 0.72 → best 0.842, crash rate 16%)", true);
 
 // ============================================================ 21 AFTER ITER22
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 4 · Climax", "The deeper part: what happened “after” iter22");
 s.addText("I had Claude trace every descendant of iter22 (de559de9) — conclusion: no better offspring appeared after it.", { x: 0.6, y: 1.95, w: 12.15, h: 0.5, fontFace: BF, fontSize: 15.5, color: INK, margin: 0 });
 const aft = [
@@ -487,7 +517,7 @@ s.addText([
 codeRef(s, "Island/migration config/openevolve_config.yaml:71-78 (num_islands:3, migration_interval/rate) · data §12.7(b)");
 
 // ============================================================ 22 FAILURE AS INSIGHT
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 4 · Climax", "Even “failure” is a shared insight");
 s.addText("8 low-score crashes → I had Claude comb the data for causes:", { x: 0.6, y: 2.1, w: 12, h: 0.5, fontFace: BF, fontSize: 18, color: INK, margin: 0 });
 card(s, 0.6, 3.0, 5.95, 2.4, "F7E9E7");
@@ -498,7 +528,7 @@ s.addText("Collaboration produces not only successes but shared understanding of
 codeRef(s, "8/50 low-score causes docs/evolution_design_notes.md §12.7(b) · diff_based_evolution:false (full-rewrite) see openevolve_config.yaml:18");
 
 // ============================================================ 23 WHO DOES WHAT
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 5 · Reflection", "Who should do what?");
 const who = [
   ["I (Human) do it myself", "direction · value judgments\nirreversible decisions · domain/physical knowledge", HUMAN],
@@ -516,7 +546,7 @@ s.addText("I split the work by three criteria: reversibility · whether value ju
 codeRef(s, "Mapping: Me→config/*.yaml ｜ Claude→src/ + tests/ ｜ evolution→EVOLVE-BLOCK (agents_evolving.yaml / evolvable_tools.py)");
 
 // ============================================================ 24 KEY TAKEAWAYS
-s = p.addSlide();
+s = mkSlide();
 header(s, "Part 5 · Reflection", "Key takeaways");
 const tk = [
   "AI collaboration is going multi-layer — “delegating autonomy” is a new skill",
@@ -534,7 +564,7 @@ s.addText("💬 Back to the opening: is your AI a tool, or a partner?", { x: 0.6
 codeRef(s, "Sources docs/evolution_design_notes.md §3 (taxonomy) · §4 (protocol/policy) · §12.7 (data)");
 
 // ============================================================ 25 CLOSING
-s = p.addSlide();
+s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("Thank you · Q & A", { x: 0.95, y: 1.9, w: 11.5, h: 1, fontFace: HF, fontSize: 42, bold: true, color: WHITE, margin: 0 });

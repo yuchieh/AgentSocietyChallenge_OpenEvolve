@@ -10,6 +10,18 @@ const INK = "23272E", MUTE = "6B7280", LIGHT = "F4F7FB", WHITE = "FFFFFF";
 const HF = "Georgia", BF = "Calibri", CF = "Consolas";
 const W = 13.33, H = 7.5;
 const sh = () => ({ type: "outer", color: "000000", blur: 7, offset: 3, angle: 135, opacity: 0.12 });
+const NOTES = [
+  "Frame the talk: L1 is about safely USING tools, L2 about safely BUILDING them — both start by taking crash-prone tool calling out of the evolution loop.",
+  "The one shared trick: freeze a safety boundary and let the content evolve freely, so the worst case is always graceful degradation, not a crash.",
+  "Before, the LLM called tools and could crash; after, a deterministic executor fetches the data before the crew runs, so no agent calls tools anymore.",
+  "Even with a frozen whitelist, evolution still chooses which queries, in what order, and how to sample — the same alphabet writes infinitely many sentences.",
+  "Walk the policy from declaration through the executor to the final score, and note the clamp that makes any bad policy degrade instead of crash.",
+  "Show the four gates an evolved tool must pass — AST scan, signature, sandbox trial, wrap — and that ReadOnlyKit limits it to read-only data.",
+  "The agent decides to call a tool by reading its docstring, so discoverability is under evolutionary pressure; broken tools are silently dropped.",
+  "Tie it together: L1 composes new sentences, L2 coins new words, both bounded by the dataset — freeze the boundary, free the content.",
+];
+let _ni = 0;
+function mkSlide() { const sl = p.addSlide(); if (NOTES[_ni]) sl.addNotes(NOTES[_ni]); _ni++; return sl; }
 
 function header(s, kicker, title) {
   s.background = { color: LIGHT };
@@ -64,7 +76,7 @@ function codeRef(s, txt, dark) {
 }
 
 // ============================================================ 1 TITLE
-let s = p.addSlide();
+let s = mkSlide();
 s.background = { color: NAVY };
 s.addShape(p.shapes.RECTANGLE, { x: 0, y: 0, w: 0.28, h: H, fill: { color: AMBER } });
 s.addText("TOOL CALLING FAILURE TAXONOMY · DEEP DIVE", { x: 1, y: 1.8, w: 11.5, h: 0.4, fontFace: BF, fontSize: 15, bold: true, color: ICE, charSpacing: 3, margin: 0 });
@@ -78,7 +90,7 @@ s.addText("Starting point — take the crash-prone “LLM-driven tool calling”
 codeRef(s, "L1 src/tools/retrieval_executor.py ｜ L2 src/tools/tool_loader.py + evolvable_tools.py", true);
 
 // ============================================================ 2 SHARED PHILOSOPHY
-s = p.addSlide();
+s = mkSlide();
 header(s, "Design philosophy", "One shared move: freeze the “boundary”, free the “content”");
 const gv = [
   ["", "L1 · Tool-use policy", "L2 · Tool generation"],
@@ -108,7 +120,7 @@ s.addText([
 codeRef(s, "L1 retrieval_executor.py:28-30 ALLOWED_* / :53 clamp ｜ L2 tool_loader.py:77-177 four gates");
 
 // ============================================================ 3 L1 MECHANISM
-s = p.addSlide();
+s = mkSlide();
 header(s, "L1 · Mechanism", "L1: Take tool calling out of the LLM’s hands");
 card(s, 0.6, 2.2, 5.95, 3.7, "F7E9E7");
 s.addText("Before (crash-prone)", { x: 0.9, y: 2.45, w: 5, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: RED, margin: 0 });
@@ -131,7 +143,7 @@ s.addText("The essence: move the crash-prone part out of the evolution space; ke
 codeRef(s, "serving_flow.py:85-93 execute_policy→inject ｜ simulation_crew.py:42-50 data_retriever has no tools");
 
 // ============================================================ 4 L1 KEY QUESTION
-s = p.addSlide();
+s = mkSlide();
 header(s, "L1 · Key question", "If the whitelist is frozen, does evolving queries / strategy matter?");
 s.addText("Yes. The key is separating the “alphabet” from the “sentence”:", { x: 0.6, y: 1.62, w: 12, h: 0.4, fontFace: BF, fontSize: 14, color: INK, margin: 0 });
 card(s, 0.6, 2.1, 5.95, 1.55, "EAF0FA");
@@ -159,7 +171,7 @@ s.addText("Evolution changes not “what can be queried” but “how it’s que
 codeRef(s, "retrieval_executor.py:29 ALLOWED_QUERIES (alphabet) · :33-37 DEFAULT_POLICY · :53 normalize_policy (compose sentence)");
 
 // ============================================================ 5 L1 DATA FLOW
-s = p.addSlide();
+s = mkSlide();
 header(s, "L1 · How it works", "How does an evolved policy flow all the way to the final score?");
 const flowL1 = ["retrieval_policy\n(evolved sentence)", "execute_policy()\nfrozen interpreter", "retrieved_context", "analyst reasons", "{stars, review}", "fitness → selection"];
 const colsL1 = [AMBER, NAVY, BLUE, BLUE, GREEN, NAVY];
@@ -179,7 +191,7 @@ s.addText("So a good policy (queries the right things, samples right) → better
 codeRef(s, "retrieval_executor.py:53 normalize_policy (clamp) · :140 execute_policy ｜ serving_flow.py:90-99 inject inputs");
 
 // ============================================================ 6 L2 MECHANISM
-s = p.addSlide();
+s = mkSlide();
 header(s, "L2 · Mechanism", "What gates does an evolved tool pass before reaching the agent?");
 const flowL2 = ["evolvable_tools.py\ntool_* fns in\nEVOLVE-BLOCK", "_load_analyst_tools()\nread at crew build", "load_evolved_tools\nfour gates", "wrap as @tool\ndocstring→desc", "attach to\npsychological\n_analyst"];
 const colsL2 = [AMBER, BLUE, NAVY, BLUE, GREEN];
@@ -206,7 +218,7 @@ s.addText("ReadOnlyKit: tools can only reach get_user / get_item / get_reviews �
 codeRef(s, "simulation_crew.py:14-30 _load_analyst_tools ｜ tool_loader.py:193 load_evolved_tools · :77/:106/:120/:156 gates · :60 ReadOnlyKit");
 
 // ============================================================ 7 L2 DOCSTRING CO-EVOLUTION
-s = p.addSlide();
+s = mkSlide();
 header(s, "L2 · How it works", "How does the agent “know” to use a tool?");
 card(s, 0.6, 2.1, 6.0, 4.0, "EAF0FA");
 s.addText("docstring co-evolution", { x: 0.9, y: 2.3, w: 5.4, h: 0.4, fontFace: HF, fontSize: 16, bold: true, color: NAVY, margin: 0 });
@@ -227,7 +239,7 @@ s.addText([
 codeRef(s, "tool_loader.py:156-177 _wrap_as_crewai_tool (docstring→description) · :226-238 silent drop ｜ simulation_crew.py:53-62 attach to analyst");
 
 // ============================================================ 8 SYNTHESIS
-s = p.addSlide();
+s = mkSlide();
 header(s, "L1 × L2 · Together", "Alphabet → sentence → new word: safely evolving innovative tools");
 const prog = [
   ["L1: compose new “sentences”", "Use a fixed “alphabet” (4 queries) to compose new retrieval sentences — deciding how to USE existing queries", BLUE],
