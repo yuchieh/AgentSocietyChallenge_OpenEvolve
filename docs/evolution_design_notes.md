@@ -419,7 +419,7 @@ grounding 洩漏（排除測試樣本）、reward hacking（避免語意檢索�
 | L2 | `openevolve_evaluator.py` hard timeout 15min | 整個 simulation wall time |
 | L3 | `openevolve_config.yaml` `evaluator.timeout=900, max_retries=2` | evaluate() 重試 |
 | L4 | `websocietysimulator/simulator.py` `future.result(timeout=300)` | 單一 task |
-| L5（缺） | `simulation_crew.py` 沒設 `max_rpm` | CrewAI/LiteLLM 內部呼叫 |
+| L5 | `simulation_crew.py` crew 設 `max_rpm`（env `OPENEVOLVE_MAX_RPM`，預設 30；0 關閉） | CrewAI/LiteLLM 內部呼叫 |
 
 **重要**：L1 接線後，data_retriever 不再用 LLM 呼叫工具，每個 task 的 LLM call 從
 ~7 次（含 ReAct 多輪）降到 ~3 次——這本身就大幅降低 rate limit 壓力（見驗證數據）。
@@ -659,7 +659,7 @@ L2 工具生成         ← 最後。此時已有 holdout 照妖鏡 + n_tools �
 - [ ] **啟動工具進化 run**：以 `evolvable_tools.py` 為 initial program 跑 OpenEvolve（A'），
   並加 `n_tools` MAP-Elites 維度 + 用 holdout 驗證進化工具的普遍價值
 - [ ] **Tier C**（RagTool registry + portfolio）實作
-- [ ] **L5 rate limit**：CrewAI 端 `max_rpm` / `litellm_params`（目前裸露）
+- [x] **L5 rate limit**：CrewAI crew 設 `max_rpm`（env `OPENEVOLVE_MAX_RPM`，預設 30；0 關閉），從源頭節流避免 429 → 連帶減少 per-task 300s timeout
 - [x] **方向 #7 Train/Val 切分**：已建立 disjoint holdout 機制（見下方「#7 實作摘要」）。後續仍可擴大 train 樣本數降低噪音
 - [x] **方向 #6 MAP-Elites 自訂維度**：已用 `preference_estimation × review_generation` 當 feature dims（見 §12.6）。後續可跑進化看 trade-off 前沿
 - [x] 完整 50-iter 進化：以 `nohup` 脫離 harness + `caffeinate` 防睡眠完成（見 §12.7）。baseline 0.72 → best 0.842，崩潰率 16%（v3 為 36%）

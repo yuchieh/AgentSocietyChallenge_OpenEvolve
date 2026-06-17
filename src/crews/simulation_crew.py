@@ -5,6 +5,12 @@ from crewai.project import CrewBase, agent, crew, task
 from src.tools.interaction_tool_wrapper import get_injected_tool
 from src.tools.tool_loader import load_evolved_tools
 
+# L5 (rate-limit defense): pace the crew's LLM calls to stay under the provider's
+# limit and avoid 429-driven retry backoffs (which can blow the per-task 300s
+# timeout). Crew-level max_rpm throttles requests per minute; 0 disables.
+# Tunable via OPENEVOLVE_MAX_RPM (default 30 — conservative for NVIDIA NIM).
+_MAX_RPM = int(os.environ.get("OPENEVOLVE_MAX_RPM", "30"))
+
 # L2: default path to the derived-tool module (repo root evolvable_tools.py).
 _DEFAULT_TOOLS_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "evolvable_tools.py"
@@ -96,9 +102,12 @@ class SimulationCrew():
 
     @crew
     def crew(self) -> Crew:
-        return Crew(
+        kwargs = dict(
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=True
+            verbose=True,
         )
+        if _MAX_RPM > 0:          # L5: throttle to avoid provider rate limits
+            kwargs["max_rpm"] = _MAX_RPM
+        return Crew(**kwargs)
